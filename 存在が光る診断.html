@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>存在が光る診断</title>
+<meta property="og:title" content="存在が光る診断">
+<meta property="og:description" content="あなたの才能の輝かせ方を、星が教えてくれる。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;700&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+<!-- 天文計算ライブラリ（CORSなし・ブラウザ内リアルタイム計算） -->
+<script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2/astronomy.browser.min.js"></script>
+<style>
+:root {
+  --bg:      #06061a;
+  --navy:    #0f0f2e;
+  --purple:  #6c3fa0;
+  --gold:    #c9a227;
+  --gold2:   #e8c84a;
+  --cream:   #f5f0e8;
+  --white:   #ffffff;
+  --muted:   #a0a0c0;
+  --glass:   rgba(255,255,255,0.06);
+  --glassbr: rgba(255,255,255,0.12);
+  --serif:   'Noto Serif JP', serif;
+  --sans:    'Noto Sans JP', sans-serif;
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+html,body{ width:100%; min-height:100vh; background:var(--bg); color:var(--cream); font-family:var(--serif); overflow-x:hidden; }
+
+body::before{
+  content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(ellipse at 20% 30%, rgba(108,63,160,.25) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 70%, rgba(201,162,39,.12) 0%, transparent 50%);
+}
+#stars{ position:fixed; inset:0; z-index:0; overflow:hidden; pointer-events:none; }
+
+/* ── Screens ── */
+.screen{
+  position:absolute; width:100%; top:0; left:0; min-height:100vh;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:2rem 1.5rem;
+  opacity:0; pointer-events:none;
+  transition:opacity .5s ease;
+  z-index:1;
+}
+.screen.active{ opacity:1; pointer-events:all; position:relative; }
+
+/* ── Type ── */
+.eyebrow{ font-family:var(--sans); font-size:.7rem; letter-spacing:.25em; color:var(--gold); text-transform:uppercase; margin-bottom:.8rem; }
+h1{ font-size:clamp(1.9rem,5.5vw,3rem); font-weight:700; line-height:1.35; color:var(--white); text-align:center; }
+h2{ font-size:clamp(1.3rem,3.5vw,1.9rem); font-weight:400; line-height:1.4; color:var(--cream); text-align:center; }
+h3{ font-size:1.05rem; font-weight:700; color:var(--gold2); margin-bottom:.5rem; }
+p{ font-family:var(--sans); font-size:.93rem; line-height:1.9; color:var(--muted); }
+.lead{ font-size:1rem; line-height:2; color:rgba(245,240,232,.85); text-align:center; max-width:500px; margin:0 auto; }
+
+.gold-bar{ width:48px; height:2px; background:linear-gradient(90deg,transparent,var(--gold),transparent); margin:1.2rem auto; }
+.divider{ width:100%; height:1px; background:linear-gradient(90deg,transparent,rgba(201,162,39,.3),transparent); margin:1.5rem 0; }
+
+/* ── Buttons ── */
+.btn{ display:inline-block; cursor:pointer; font-family:var(--sans); font-size:.95rem; font-weight:500; letter-spacing:.06em; padding:.9rem 2.2rem; border:none; border-radius:50px; transition:all .3s; text-decoration:none; }
+.btn-primary{ background:linear-gradient(135deg,var(--gold),var(--gold2)); color:var(--navy); box-shadow:0 4px 24px rgba(201,162,39,.35); }
+.btn-primary:hover{ transform:translateY(-2px); box-shadow:0 8px 32px rgba(201,162,39,.5); }
+.btn-secondary{ background:var(--glass); color:var(--cream); border:1px solid var(--glassbr); backdrop-filter:blur(10px); }
+.btn-secondary:hover{ background:rgba(255,255,255,.1); transform:translateY(-2px); }
+.btn-outline{ background:transparent; color:var(--gold); border:1px solid var(--gold); font-size:.82rem; padding:.65rem 1.6rem; }
+.btn-outline:hover{ background:rgba(201,162,39,.1); }
+.back-btn{ background:none; border:none; cursor:pointer; color:var(--muted); font-family:var(--sans); font-size:.8rem; padding:.4rem; display:inline-flex; align-items:center; gap:.3rem; transition:color .2s; }
+.back-btn:hover{ color:var(--cream); }
+
+/* ── Method cards ── */
+.method-cards{ display:flex; flex-direction:column; gap:.9rem; width:100%; max-width:420px; margin:1.8rem auto 0; }
+.method-card{ background:var(--glass); border:1px solid var(--glassbr); border-radius:16px; padding:1.3rem 1.6rem; cursor:pointer; transition:all .3s; backdrop-filter:blur(12px); display:flex; align-items:center; gap:1rem; }
+.method-card:hover{ border-color:var(--gold); background:rgba(201,162,39,.08); transform:translateY(-2px); }
+.method-icon{ font-size:1.9rem; min-width:44px; text-align:center; }
+.method-text h4{ font-family:var(--serif); font-size:.95rem; font-weight:700; color:var(--cream); margin-bottom:.2rem; }
+.method-text p{ font-size:.78rem; color:var(--muted); line-height:1.5; }
+
+/* ── Form ── */
+.form-wrap{ width:100%; max-width:420px; margin:0 auto; }
+.form-group{ margin-bottom:1.3rem; }
+label{ display:block; font-family:var(--sans); font-size:.78rem; letter-spacing:.1em; color:var(--gold); margin-bottom:.45rem; }
+select,input[type=number]{ width:100%; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.15); border-radius:10px; color:var(--cream); font-family:var(--serif); font-size:.95rem; padding:.8rem .95rem; appearance:none; -webkit-appearance:none; transition:border-color .3s; outline:none; }
+select:focus,input[type=number]:focus{ border-color:var(--gold); box-shadow:0 0 0 3px rgba(201,162,39,.15); }
+select option{ background:#1a1a3e; color:var(--cream); }
+.date-row{ display:grid; grid-template-columns:2fr 1fr 1fr; gap:.7rem; }
+.date-unit{ font-size:.68rem; color:var(--muted); margin-top:.25rem; font-family:var(--sans); }
+.error-msg{ color:#ff6b6b; font-family:var(--sans); font-size:.78rem; margin-top:.35rem; display:none; }
+
+/* ── Confirm ── */
+.confirm-card{ background:var(--glass); border:1px solid var(--glassbr); border-radius:20px; padding:1.8rem; text-align:center; backdrop-filter:blur(12px); max-width:360px; width:100%; margin:1.3rem auto 0; }
+.confirm-signs{ display:flex; gap:1rem; justify-content:center; margin:1rem 0; flex-wrap:wrap; }
+.sign-pill{ background:rgba(201,162,39,.15); border:1px solid rgba(201,162,39,.4); border-radius:50px; padding:.45rem 1.1rem; font-family:var(--serif); font-size:.82rem; color:var(--gold2); }
+.sign-pill span{ display:block; font-size:.62rem; color:var(--muted); font-family:var(--sans); margin-bottom:.15rem; letter-spacing:.08em; }
+
+/* ── Result ── */
+#screen-result{ justify-content:flex-start; padding:2.5rem 1.5rem 4rem; }
+.result-wrap{ width:100%; max-width:580px; margin:0 auto; }
+
+.result-title-wrap{ text-align:center; margin:1rem 0 .5rem; }
+.result-title{
+  font-size:clamp(1.4rem,4.5vw,2rem); font-weight:700;
+  background:linear-gradient(135deg,var(--gold),var(--gold2),#fff8dc);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  line-height:1.4;
+}
+
+.result-card{ background:var(--glass); border:1px solid var(--glassbr); border-radius:18px; padding:1.5rem 1.6rem; margin:1rem 0; backdrop-filter:blur(10px); }
+.result-card.synthesis{ border-color:rgba(201,162,39,.35); background:rgba(201,162,39,.05); }
+
+/* 伝え方・在り方カードのキーワード */
+.kw-tag{
+  display:inline-block;
+  background:rgba(201,162,39,.15); border:1px solid rgba(201,162,39,.35);
+  border-radius:50px; padding:.3rem 1rem;
+  font-family:var(--serif); font-size:.88rem; color:var(--gold2);
+  margin-bottom:.65rem;
+}
+
+.result-card p.body-text{ color:rgba(245,240,232,.82); font-size:.9rem; line-height:1.95; }
+
+/* synthesis専用 */
+.synthesis-text{
+  font-family:var(--serif); font-size:.96rem; line-height:2.1;
+  color:rgba(245,240,232,.9); white-space:pre-line; text-align:center;
+}
+.synthesis-title-inline{
+  font-size:1.05rem; font-weight:700; color:var(--gold2);
+  line-height:1.5;
+}
+
+/* Action */
+.action-wrap{ display:flex; flex-direction:column; gap:.7rem; margin-top:.3rem; }
+.action-item{ display:flex; align-items:flex-start; gap:.6rem; }
+.action-badge{
+  background:rgba(201,162,39,.18); border:1px solid rgba(201,162,39,.4);
+  border-radius:6px; padding:.12rem .5rem;
+  font-size:.7rem; font-family:var(--sans); color:var(--gold2);
+  white-space:nowrap; min-width:54px; text-align:center; margin-top:2px; flex-shrink:0;
+}
+.action-item p{ font-size:.9rem; color:var(--cream); line-height:1.65; font-family:var(--sans); }
+
+/* Share */
+.share-area{ text-align:center; margin:1.8rem 0 1rem; }
+.share-copy{
+  background:rgba(255,255,255,.03); border:1px dashed rgba(255,255,255,.18);
+  border-radius:12px; padding:.9rem 1.2rem;
+  font-family:var(--sans); font-size:.83rem; color:var(--muted); line-height:1.75;
+  margin:.8rem 0 1.3rem; text-align:left;
+}
+.btn-share{
+  background:#000; color:#fff; border-radius:50px; padding:.8rem 1.9rem;
+  font-family:var(--sans); font-size:.88rem; cursor:pointer; border:none;
+  display:inline-flex; align-items:center; gap:.4rem;
+  transition:all .3s; text-decoration:none;
+}
+.btn-share:hover{ background:#222; transform:translateY(-2px); }
+
+/* CTA */
+.cta-section{
+  background:linear-gradient(135deg,rgba(108,63,160,.2),rgba(201,162,39,.1));
+  border:1px solid rgba(201,162,39,.25); border-radius:22px;
+  padding:1.8rem 1.6rem; text-align:center; margin:1.2rem 0;
+}
+.cta-section h3{ font-size:1.05rem; font-weight:700; color:var(--cream); margin-bottom:.5rem; }
+.cta-section p{ font-size:.85rem; line-height:1.8; color:rgba(245,240,232,.7); margin-bottom:1.1rem; }
+.session-link{ display:inline-block; font-family:var(--sans); font-size:.78rem; color:var(--muted); margin-top:.9rem; text-decoration:underline; text-underline-offset:3px; cursor:pointer; }
+.session-link:hover{ color:var(--gold); }
+
+/* Boundary note */
+.boundary-note{
+  background:rgba(255,200,100,.1); border:1px solid rgba(255,200,100,.3);
+  border-radius:10px; padding:.75rem 1rem; margin-top:.5rem;
+  font-family:var(--sans); font-size:.77rem; color:rgba(255,200,100,.9); line-height:1.7;
+  display:none;
+}
+
+/* Animations */
+@keyframes fadeInUp{ from{ opacity:0; transform:translateY(18px); } to{ opacity:1; transform:translateY(0); } }
+@keyframes glow{ 0%,100%{ text-shadow:0 0 20px rgba(201,162,39,.3); } 50%{ text-shadow:0 0 40px rgba(201,162,39,.7); } }
+@keyframes float{ 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-8px); } }
+.afd0{ animation:fadeInUp .7s ease both; }
+.afd1{ animation:fadeInUp .7s .1s ease both; }
+.afd2{ animation:fadeInUp .7s .22s ease both; }
+.afd3{ animation:fadeInUp .7s .38s ease both; }
+.afd4{ animation:fadeInUp .7s .52s ease both; }
+.glow-text{ animation:glow 3s ease-in-out infinite; }
+.float{ animation:float 4s ease-in-out infinite; }
+
+@media(max-width:480px){
+  .result-card{ padding:1.2rem 1.1rem; }
+  h1{ font-size:1.75rem; }
+  .confirm-signs{ flex-direction:column; align-items:center; }
+}
+</style>
+</head>
+<body>
+<canvas id="stars"></canvas>
+
+<!-- ══ SCREEN 1: HERO ══════════════════════════════════════════════ -->
+<div class="screen active" id="screen-hero">
+  <div style="text-align:center;max-width:500px;margin:0 auto;">
+    <div class="float" style="font-size:2.8rem;margin-bottom:.3rem;">✦</div>
+    <div class="eyebrow afd0">存在が光る診断</div>
+    <h1 class="afd1" style="margin-bottom:.3rem;">
+      あなたの存在は、<br>もっと輝ける。
+    </h1>
+    <div class="gold-bar afd2"></div>
+    <p class="lead afd2" style="margin-bottom:2.2rem;">
+      才能を知ることより、大切なことがある。<br>
+      才能の<strong style="color:var(--gold2);">輝かせ方</strong>を知ること。<br><br>
+      生まれ持った「伝え方」と「在り方」を知るだけで、<br>
+      がんばらなくても、存在が自然と光りはじめます。
+    </p>
+    <button class="btn btn-primary afd3" onclick="showScreen('screen-birthdate')">
+      ✦ 診断をはじめる
+    </button>
+    <p style="font-size:.73rem;color:var(--muted);margin-top:1.2rem;" class="afd4">無料・所要時間 約1分</p>
+  </div>
+</div>
+
+<!-- ══ SCREEN 2: BIRTHDATE ═════════════════════════════════════════ -->
+<div class="screen" id="screen-birthdate">
+  <div class="form-wrap">
+    <button class="back-btn" onclick="showScreen('screen-hero')">← もどる</button>
+    <div class="eyebrow" style="text-align:center;">STEP 1</div>
+    <h2 style="margin-bottom:.4rem;">生年月日を入力してください</h2>
+    <div class="gold-bar"></div>
+    <p style="text-align:center;margin:.4rem 0 1.6rem;font-size:.83rem;color:var(--muted);">
+      1900年〜2100年の生年月日に対応しています
+    </p>
+    <div class="form-group">
+      <label>生年月日</label>
+      <div class="date-row">
+        <div>
+          <input type="number" id="bd-year" placeholder="1985" min="1950" max="2030">
+          <div class="date-unit">年</div>
+        </div>
+        <div>
+          <select id="bd-month">
+            <option value="">月</option>
+                        <option value="1">1月</option>
+            <option value="2">2月</option>
+            <option value="3">3月</option>
+            <option value="4">4月</option>
+            <option value="5">5月</option>
+            <option value="6">6月</option>
+            <option value="7">7月</option>
+            <option value="8">8月</option>
+            <option value="9">9月</option>
+            <option value="10">10月</option>
+            <option value="11">11月</option>
+            <option value="12">12月</option>
+          </select>
+          <div class="date-unit">月</div>
+        </div>
+        <div>
+          <select id="bd-day">
+            <option value="">日</option>
+                        <option value="1">1日</option>
+            <option value="2">2日</option>
+            <option value="3">3日</option>
+            <option value="4">4日</option>
+            <option value="5">5日</option>
+            <option value="6">6日</option>
+            <option value="7">7日</option>
+            <option value="8">8日</option>
+            <option value="9">9日</option>
+            <option value="10">10日</option>
+            <option value="11">11日</option>
+            <option value="12">12日</option>
+            <option value="13">13日</option>
+            <option value="14">14日</option>
+            <option value="15">15日</option>
+            <option value="16">16日</option>
+            <option value="17">17日</option>
+            <option value="18">18日</option>
+            <option value="19">19日</option>
+            <option value="20">20日</option>
+            <option value="21">21日</option>
+            <option value="22">22日</option>
+            <option value="23">23日</option>
+            <option value="24">24日</option>
+            <option value="25">25日</option>
+            <option value="26">26日</option>
+            <option value="27">27日</option>
+            <option value="28">28日</option>
+            <option value="29">29日</option>
+            <option value="30">30日</option>
+            <option value="31">31日</option>
+          </select>
+          <div class="date-unit">日</div>
+        </div>
+      </div>
+      <div class="error-msg" id="err-birthdate">正しい生年月日を入力してください</div>
+    </div>
+    <!-- 生まれた時間（任意） -->
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:.4rem;">
+        生まれた時間
+        <span style="font-size:.68rem;color:var(--muted);font-weight:400;letter-spacing:0;">（わかる場合のみ・任意）</span>
+      </label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.6rem;">
+        <div>
+          <select id="bd-hour" onchange="toggleBdMinute()">
+            <option value="">不明（入力なし）</option>
+                        <option value="0">0時</option>
+            <option value="1">1時</option>
+            <option value="2">2時</option>
+            <option value="3">3時</option>
+            <option value="4">4時</option>
+            <option value="5">5時</option>
+            <option value="6">6時</option>
+            <option value="7">7時</option>
+            <option value="8">8時</option>
+            <option value="9">9時</option>
+            <option value="10">10時</option>
+            <option value="11">11時</option>
+            <option value="12">12時</option>
+            <option value="13">13時</option>
+            <option value="14">14時</option>
+            <option value="15">15時</option>
+            <option value="16">16時</option>
+            <option value="17">17時</option>
+            <option value="18">18時</option>
+            <option value="19">19時</option>
+            <option value="20">20時</option>
+            <option value="21">21時</option>
+            <option value="22">22時</option>
+            <option value="23">23時</option>
+          </select>
+          <div class="date-unit">時</div>
+        </div>
+        <div>
+          <select id="bd-minute" disabled style="opacity:.4;transition:opacity .2s;">
+                        <option value="0">00分</option>
+            <option value="1">01分</option>
+            <option value="2">02分</option>
+            <option value="3">03分</option>
+            <option value="4">04分</option>
+            <option value="5">05分</option>
+            <option value="6">06分</option>
+            <option value="7">07分</option>
+            <option value="8">08分</option>
+            <option value="9">09分</option>
+            <option value="10">10分</option>
+            <option value="11">11分</option>
+            <option value="12">12分</option>
+            <option value="13">13分</option>
+            <option value="14">14分</option>
+            <option value="15">15分</option>
+            <option value="16">16分</option>
+            <option value="17">17分</option>
+            <option value="18">18分</option>
+            <option value="19">19分</option>
+            <option value="20">20分</option>
+            <option value="21">21分</option>
+            <option value="22">22分</option>
+            <option value="23">23分</option>
+            <option value="24">24分</option>
+            <option value="25">25分</option>
+            <option value="26">26分</option>
+            <option value="27">27分</option>
+            <option value="28">28分</option>
+            <option value="29">29分</option>
+            <option value="30">30分</option>
+            <option value="31">31分</option>
+            <option value="32">32分</option>
+            <option value="33">33分</option>
+            <option value="34">34分</option>
+            <option value="35">35分</option>
+            <option value="36">36分</option>
+            <option value="37">37分</option>
+            <option value="38">38分</option>
+            <option value="39">39分</option>
+            <option value="40">40分</option>
+            <option value="41">41分</option>
+            <option value="42">42分</option>
+            <option value="43">43分</option>
+            <option value="44">44分</option>
+            <option value="45">45分</option>
+            <option value="46">46分</option>
+            <option value="47">47分</option>
+            <option value="48">48分</option>
+            <option value="49">49分</option>
+            <option value="50">50分</option>
+            <option value="51">51分</option>
+            <option value="52">52分</option>
+            <option value="53">53分</option>
+            <option value="54">54分</option>
+            <option value="55">55分</option>
+            <option value="56">56分</option>
+            <option value="57">57分</option>
+            <option value="58">58分</option>
+            <option value="59">59分</option>
+          </select>
+          <div class="date-unit">分</div>
+        </div>
+      </div>
+      <p style="font-size:.7rem;color:var(--muted);margin-top:.3rem;line-height:1.6;">
+        時間がわかると、より正確に計算できます。不明でも問題ありません。
+      </p>
+    </div>
+    <div style="text-align:center;margin-top:.8rem;">
+      <button class="btn btn-primary" onclick="submitBirthdate()">✦ 星座を調べる</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN 3: CONFIRM ═══════════════════════════════════════════ -->
+<div class="screen" id="screen-confirm">
+  <div style="width:100%;max-width:440px;margin:0 auto;text-align:center;">
+    <button class="back-btn" onclick="showScreen('screen-birthdate')" style="margin:0 auto .8rem;">← もどる</button>
+    <div class="eyebrow">STEP 2</div>
+    <h2 style="margin-bottom:.3rem;">あなたの星座はこちらです</h2>
+    <div class="gold-bar"></div>
+    <div class="confirm-card">
+      <p style="font-size:.78rem;color:var(--muted);margin-bottom:.3rem;" id="confirm-source-note">生年月日から算出しました</p>
+      <div class="confirm-signs">
+        <div class="sign-pill">
+          <span>伝え方の星座（☿）</span>
+          <strong id="confirm-mercury-text">—</strong>
+        </div>
+        <div class="sign-pill">
+          <span>在り方の星座（♀）</span>
+          <strong id="confirm-venus-text">—</strong>
+        </div>
+      </div>
+      <p style="font-size:.77rem;color:var(--muted);line-height:1.7;margin-top:.4rem;">
+        こちらの星座でよろしいですか？
+      </p>
+    </div>
+    <div style="margin-top:1.4rem;">
+      <button class="btn btn-primary" onclick="confirmAndShowResult()">✦ これで結果を見る</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCREEN 4: RESULT ════════════════════════════════════════════ -->
+<div class="screen" id="screen-result">
+  <div class="result-wrap">
+    <button class="back-btn" onclick="showScreen('screen-birthdate')">← もどる</button>
+
+    <!-- タイトル -->
+    <div class="result-title-wrap">
+      <div style="font-size:1.6rem;margin-bottom:.2rem;">✦</div>
+      <div class="eyebrow">あなたの存在の輝き方</div>
+      <div class="result-title glow-text" id="result-title">—</div>
+    </div>
+    <div class="gold-bar"></div>
+
+    <!-- 伝え方カード -->
+    <div class="result-card">
+      <h3>✦ あなたの「伝え方」の才能</h3>
+      <div class="kw-tag" id="result-m-kw"></div>
+      <p class="body-text" id="result-m-desc"></p>
+    </div>
+
+    <!-- 在り方カード -->
+    <div class="result-card">
+      <h3>✦ あなたの「在り方」のギフト</h3>
+      <div class="kw-tag" id="result-v-kw"></div>
+      <p class="body-text" id="result-v-desc"></p>
+    </div>
+
+    <!-- 統合メッセージ（重複なし） -->
+    <div class="result-card synthesis">
+      <h3>✦ あなたの輝き方</h3>
+      <p class="synthesis-text" id="result-synthesis"></p>
+    </div>
+
+    <!-- アクションヒント -->
+    <div class="result-card">
+      <h3>✦ 才能を輝かせるために</h3>
+      <div class="action-wrap" id="result-actions"></div>
+      <p style="font-size:.8rem;color:var(--muted);margin-top:.8rem;line-height:1.7;">
+        この二つを意識するだけで、才能が輝き始めます。
+      </p>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Share -->
+    <div class="share-area">
+      <p style="font-size:.83rem;color:var(--muted);margin-bottom:.4rem;">
+        あなたの輝き方を、シェアしてみませんか？
+      </p>
+      <div class="share-copy" id="share-copy-text"></div>
+      <a class="btn-share" id="share-btn" href="#" target="_blank" rel="noopener">
+        𝕏 でシェアする
+      </a>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- CTA -->
+    <div class="cta-section">
+      <h3>あなたの存在をもっと深く輝かせたい方へ</h3>
+      <p>才能の輝かせ方のヒントを、メルマガでお届けしています。<br>
+      登録は無料です。</p>
+      <button class="btn btn-primary" onclick="openMailForm()">✦ メルマガに登録する（無料）</button>
+      <div>
+        <a class="session-link" onclick="openSession()">
+          才能をもっと深く知りたい方は、個人セッションへ →
+        </a>
+      </div>
+    </div>
+
+    <p style="text-align:center;font-size:.7rem;color:rgba(160,160,192,.4);
+      margin-top:2rem;font-family:var(--sans);letter-spacing:.05em;">
+      © 存在が光る診断 by Eri
+    </p>
+  </div>
+</div>
+
+<script>
+// ── 埋め込みデータ ────────────────────────────────────────────────
+const PATTERNS  = {"牡羊座:牡羊座": {"title": "炎のように自らの道を切り拓く存在", "mk": "直感と熱量", "md": "瞬間のひらめきを言葉にする才能の持ち主。「今だ」と感じた瞬間に放たれる言葉は、炎のように相手の心を動かします。スピードと情熱が、あなたの伝え方を唯一無二にしています。", "ma": "ひらめいた瞬間にすぐ言葉にして発信する", "vk": "「はじまりの切符」を引き寄せる力", "vd": "自分が「一番乗り」できる環境、即断即決・短期集中の働き方があなたを輝かせます。直感的でエネルギッシュ、原色のような潔い美的センスを持っています。あなたが直感に従って動くとき、新しいチャンスやリーダーの椅子が自然と転がり込みます。頑張らなくても、なぜか「一番最初にたどり着く人」になるのがあなたのギフトです。", "va": "直感に従ってすぐ動く。一番乗りできる環境に身を置く", "synthesis": "この二つが重なるとき、あなたは\n「炎のように自らの道を切り拓く存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "ひらめいた瞬間にすぐ言葉にして発信すること"}, {"label": "在り方", "text": "直感に従ってすぐ動く。一番乗りできる環境に身を置くこと"}], "share": "私の存在の輝き方は「炎のように自らの道を切り拓く存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡羊座:牡牛座": {"title": "情熱と安心感で人を動かす存在", "mk": "直感と熱量", "md": "瞬間のひらめきを言葉にする才能の持ち主。「今だ」と感じた瞬間に放たれる言葉は、炎のように相手の心を動かします。スピードと情熱が、あなたの伝え方を唯一無二にしています。", "ma": "ひらめいた瞬間にすぐ言葉にして発信する", "vk": "「物質的豊かさ」を引き寄せる力", "vd": "五感が満たされる環境、マイペースで安定したルーティンの中でこそ輝きます。本物志向の美的センスで、上質な素材感・伝統美・心地よさを見抜く目があります。心地よさを妥協せずに選んでいると、物質的な豊かさと確実な資産が向こうからやってきます。五感を満たすほどに、豊かさが物質化していくギフトです。", "va": "五感の心地よさを妥協せずに選び続ける", "synthesis": "この二つが重なるとき、あなたは\n「情熱と安心感で人を動かす存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "ひらめいた瞬間にすぐ言葉にして発信すること"}, {"label": "在り方", "text": "五感の心地よさを妥協せずに選び続けること"}], "share": "私の存在の輝き方は「情熱と安心感で人を動かす存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡羊座:双子座": {"title": "熱いひらめきと知的な面白さで引き付ける存在", "mk": "直感と熱量", "md": "瞬間のひらめきを言葉にする才能の持ち主。「今だ」と感じた瞬間に放たれる言葉は、炎のように相手の心を動かします。スピードと情熱が、あなたの伝え方を唯一無二にしています。", "ma": "ひらめいた瞬間にすぐ言葉にして発信する", "vk": "「旬の情報とチャンス」を引き寄せる力", "vd": "変化に富んだ環境、複業やパラレルな役割の中で輝きます。軽やかでトレンド感があり、言葉のセンスと遊び心ある美意識の持ち主です。好奇心のままに軽やかに動くだけで、今最も知りたい情報と面白い人脈が勝手に集まります。あなたがメディアになるほど、旬なチャンスが次々と舞い込むギフトです。", "va": "好奇心のままに軽やかに動いて情報を媒介する", "synthesis": "この二つが重なるとき、あなたは\n「熱いひらめきと知的な面白さで引き付ける存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "ひらめいた瞬間にすぐ言葉にして発信すること"}, {"label": "在り方", "text": "好奇心のままに軽やかに動いて情報を媒介すること"}], "share": "私の存在の輝き方は「熱いひらめきと知的な面白さで引き付ける存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡羊座:蟹座": {"title": "真っ直ぐな熱量と深い温かさで包む存在", "mk": "直感と熱量", "md": "瞬間のひらめきを言葉にする才能の持ち主。「今だ」と感じた瞬間に放たれる言葉は、炎のように相手の心を動かします。スピードと情熱が、あなたの伝え方を唯一無二にしています。", "ma": "ひらめいた瞬間にすぐ言葉にして発信する", "vk": "「絶対的な味方と居場所」を引き寄せる力", "vd": "家族のような信頼関係、在宅や温かいチーム作りの中で輝きます。懐かしく情緒的な、居心地の良い空間と手作り感の美意識を持っています。身近な人を慈しみ自分の感情を大切にしていると、困ったときに必ず助けてくれる仲間が整います。愛を与えるほど、守られる側にも回れるギフトです。", "va": "身近な人への温かさを大切にし、感情を丁寧に扱う", "synthesis": "この二つが重なるとき、あなたは\n「真っ直ぐな熱量と深い温かさで包む存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "ひらめいた瞬間にすぐ言葉にして発信すること"}, {"label": "在り方", "text": "身近な人への温かさを大切にし、感情を丁寧に扱うこと"}], "share": "私の存在の輝き方は「真っ直ぐな熱量と深い温かさで包む存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡羊座:獅子座": {"title": "炎と炎が重なる圧倒的な輝きの存在", "mk": "直感と熱量", "md": "瞬間のひらめきを言葉にする才能の持ち主。「今だ」と感じた瞬間に放たれる言葉は、炎のように相手の心を動かします。スピードと情熱が、あなたの伝え方を唯一無二にしています。", "ma": "ひらめいた瞬間にすぐ言葉にして発信する", "vk": "「賞賛とスポットライト」を引き寄せる力", "vd": "自己表現ができる華やかな場、称賛される立場の中で輝きます。ドラマチックで豪華、主役級の存在感とゴールドの輝きを放つ美意識があります。心から楽しみ堂々と表現しているだけで、憧れの視線と特別な待遇が引き寄せられます。あなたが輝けば輝くほど、世界があなたを主役として遇してくれるギフトです。", "va": "自分が心から楽しめることを最優先にして堂々と表現する", "synthesis": "この二つが重なるとき、あなたは\n「炎と炎が重なる圧倒的な輝きの存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "ひらめいた瞬間にすぐ言葉にして発信すること"}, {"label": "在り方", "text": "自分が心から楽しめることを最優先にして堂々と表現すること"}], "share": "私の存在の輝き方は「炎と炎が重なる圧倒的な輝きの存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡羊座:乙女座": {"title": "直感と誠実さで本質を届ける存在", "mk": "直感と熱量", "md": "瞬間のひらめきを言葉にする才能の持ち主。「今だ」と感じた瞬間に放たれる言葉は、炎のように相手の心を動かします。スピードと情熱が、あなたの伝え方を唯一無二にしています。", "ma": "ひらめいた瞬間にすぐ言葉にして発信する", "vk": "「揺るぎない信頼と重用」を引き寄せる力", "vd": "整理された清潔な環境、実務・サポート・細部への貢献の中で輝きます。清潔で機能的なミニマルな美と、緻密なデザイン感覚を持っています。目の前のことを丁寧に整え誠実にサポートすると、「あなたにしか頼めない」という指名が積み上がります。整えるほどに、実利を伴う安定した需要がやってくるギフトです。", "va": "目の前を丁寧に整え、誠実にサポートに徹する", "synthesis": "この二つが重なるとき、あなたは\n「直感と誠実さで本質を届ける存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "ひらめいた瞬間にすぐ言葉にして発信すること"}, {"label": "在り方", "text": "目の前を丁寧に整え、誠実にサポートに徹すること"}], "share": "私の存在の輝き方は「直感と誠実さで本質を届ける存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡羊座:天秤座": {"title": "スピードと美しさを両立する存在", "mk": "直感と熱量", "md": "瞬間のひらめきを言葉にする才能の持ち主。「今だ」と感じた瞬間に放たれる言葉は、炎のように相手の心を動かします。スピードと情熱が、あなたの伝え方を唯一無二にしています。", "ma": "ひらめいた瞬間にすぐ言葉にして発信する", "vk": "「人生を格上げする良縁」を引き寄せる力", "vd": "洗練された人間関係、交渉やデザイン・美に関わる場で輝きます。優雅で調和のとれたシンメトリーと万人受けする美意識を持っています。自分の美意識を磨き調和を保っているだけで、自分をより素敵な場所へ連れて行ってくれる人が現れます。あなたがエレガントであるほど、最高のパートナーシップが引き寄せられるギフトです。", "va": "美意識を磨いて、自分の世界の調和と洗練を保つ", "synthesis": "この二つが重なるとき、あなたは\n「スピードと美しさを両立する存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "ひらめいた瞬間にすぐ言葉にして発信すること"}, {"label": "在り方", "text": "美意識を磨いて、自分の世界の調和と洗練を保つこと"}], "share": "私の存在の輝き方は「スピードと美しさを両立する存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡羊座:蠍座": {"title": "本能的な直感と深い洞察を持つ存在", "mk": "直感と熱量", "md": "瞬間のひらめきを言葉にする才能の持ち主。「今だ」と感じた瞬間に放たれる言葉は、炎のように相手の心を動かします。スピードと情熱が、あなたの伝え方を唯一無二にしています。", "ma": "ひらめいた瞬間にすぐ言葉にして発信する", "vk": "「深い忠誠と受け継がれる遺産」を引き寄せる力", "vd": "一つのことに没頭できる環境、深い探求・秘密保持・変容の中で輝きます。深遠で神秘的、重厚な色彩とセクシーさ、核心を突く表現の美意識があります。本質を深く追求するほど、秘密の知恵や大きな権限、遺産のような重厚な富を託されます。深めるほどに、濃密な力と深い忠誠が集まるギフトです。", "va": "一つのことに深く潜り続け、本質の探求を手放さない", "synthesis": "この二つが重なるとき、あなたは\n「本能的な直感と深い洞察を持つ存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "ひらめいた瞬間にすぐ言葉にして発信すること"}, {"label": "在り方", "text": "一つのことに深く潜り続け、本質の探求を手放さないこと"}], "share": "私の存在の輝き方は「本能的な直感と深い洞察を持つ存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡羊座:射手座": {"title": "自由と情熱で未来を切り開く存在", "mk": "直感と熱量", "md": "瞬間のひらめきを言葉にする才能の持ち主。「今だ」と感じた瞬間に放たれる言葉は、炎のように相手の心を動かします。スピードと情熱が、あなたの伝え方を唯一無二にしています。", "ma": "ひらめいた瞬間にすぐ言葉にして発信する", "vk": "「世界を広げる自由の切符」を引き寄せる力", "vd": "自由度が高く遠出できる環境、教育・哲学・海外関連の中で輝きます。開放的でダイナミック、異国情緒とラフなスタイルの自由な美意識があります。高い理想を掲げて学んでいると、海外との縁や未知の体験ができる招待状が届きます。遠くを見つめるほど、精神的・物理的な移動の自由が手に入るギフトです。", "va": "高い理想を掲げ学び続け、遠くに目を向けて行動する", "synthesis": "この二つが重なるとき、あなたは\n「自由と情熱で未来を切り開く存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "ひらめいた瞬間にすぐ言葉にして発信すること"}, {"label": "在り方", "text": "高い理想を掲げ学び続け、遠くに目を向けて行動すること"}], "share": "私の存在の輝き方は「自由と情熱で未来を切り開く存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡羊座:山羊座": {"title": "情熱を信頼に変えて積み上げる存在", "mk": "直感と熱量", "md": "瞬間のひらめきを言葉にする才能の持ち主。「今だ」と感じた瞬間に放たれる言葉は、炎のように相手の心を動かします。スピードと情熱が、あなたの伝え方を唯一無二にしています。", "ma": "ひらめいた瞬間にすぐ言葉にして発信する", "vk": "「社会的地位と堅実な豊かさ」を引き寄せる力", "vd": "秩序があり成果が目に見える環境、経営・構築・野心の中で輝きます。クラシックで正統派、格式高い機能美と時間の重みある美意識を持っています。目的を持ってコツコツと形を作っていると、確固たる社会的地位と長期的な不労所得が残ります。誠実に「形」にするほど、社会的な敬意と報酬が定着していくギフトです。", "va": "目的を持ってコツコツと形を作り続ける", "synthesis": "この二つが重なるとき、あなたは\n「情熱を信頼に変えて積み上げる存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "ひらめいた瞬間にすぐ言葉にして発信すること"}, {"label": "在り方", "text": "目的を持ってコツコツと形を作り続けること"}], "share": "私の存在の輝き方は「情熱を信頼に変えて積み上げる存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡羊座:水瓶座": {"title": "直感と革新で世界を変える存在", "mk": "直感と熱量", "md": "瞬間のひらめきを言葉にする才能の持ち主。「今だ」と感じた瞬間に放たれる言葉は、炎のように相手の心を動かします。スピードと情熱が、あなたの伝え方を唯一無二にしています。", "ma": "ひらめいた瞬間にすぐ言葉にして発信する", "vk": "「境界のない自由とつながり」を引き寄せる力", "vd": "自由でフラットな環境、テクノロジー・システム構築・変革の中で輝きます。先端でユニーク、近未来的な常識を覆すデザインの美意識を持っています。常識に囚われずフラットに考えているだけで、グローバルな人脈と革新的なアイデアが広がります。自由でいるほど、面白い未来が向こうからやってくるギフトです。", "va": "常識に囚われず自由にフラットに、革新的に考え行動する", "synthesis": "この二つが重なるとき、あなたは\n「直感と革新で世界を変える存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "ひらめいた瞬間にすぐ言葉にして発信すること"}, {"label": "在り方", "text": "常識に囚われず自由にフラットに、革新的に考え行動すること"}], "share": "私の存在の輝き方は「直感と革新で世界を変える存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡羊座:魚座": {"title": "魂から魂へ直接届く言葉を持つ存在", "mk": "直感と熱量", "md": "瞬間のひらめきを言葉にする才能の持ち主。「今だ」と感じた瞬間に放たれる言葉は、炎のように相手の心を動かします。スピードと情熱が、あなたの伝え方を唯一無二にしています。", "ma": "ひらめいた瞬間にすぐ言葉にして発信する", "vk": "「魂を揺さぶるインスピレーション」を引き寄せる力", "vd": "境界線のない曖昧な環境、芸術・ヒーリング・スピリチュアルの中で輝きます。幻想的で情緒的、透き通る色と境界を溶かすアートの美意識を持っています。目に見えないものを信じて委ねていると、奇跡的なタイミングと魂を揺さぶる感動が溢れます。委ねるほどに、天の助け（シンクロニシティ）が頻発するギフトです。", "va": "目に見えないものを信じ、感覚と霊感に委ねて動く", "synthesis": "この二つが重なるとき、あなたは\n「魂から魂へ直接届く言葉を持つ存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "ひらめいた瞬間にすぐ言葉にして発信すること"}, {"label": "在り方", "text": "目に見えないものを信じ、感覚と霊感に委ねて動くこと"}], "share": "私の存在の輝き方は「魂から魂へ直接届く言葉を持つ存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡牛座:牡羊座": {"title": "確かさと情熱が合わさった不動の存在", "mk": "言葉の重みと温もり", "md": "言葉に温もりと重みを宿す才能の持ち主。焦らず、丁寧に積み上げた言葉は、相手の心に深く根づきます。実感のある確かな伝え方が、揺るぎない信頼を生み出します。", "ma": "実感のこもった言葉を丁寧に積み上げる", "vk": "「はじまりの切符」を引き寄せる力", "vd": "自分が「一番乗り」できる環境、即断即決・短期集中の働き方があなたを輝かせます。直感的でエネルギッシュ、原色のような潔い美的センスを持っています。あなたが直感に従って動くとき、新しいチャンスやリーダーの椅子が自然と転がり込みます。頑張らなくても、なぜか「一番最初にたどり着く人」になるのがあなたのギフトです。", "va": "直感に従ってすぐ動く。一番乗りできる環境に身を置く", "synthesis": "この二つが重なるとき、あなたは\n「確かさと情熱が合わさった不動の存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実感のこもった言葉を丁寧に積み上げること"}, {"label": "在り方", "text": "直感に従ってすぐ動く。一番乗りできる環境に身を置くこと"}], "share": "私の存在の輝き方は「確かさと情熱が合わさった不動の存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡牛座:牡牛座": {"title": "言葉と存在に揺るぎない重みを持つ存在", "mk": "言葉の重みと温もり", "md": "言葉に温もりと重みを宿す才能の持ち主。焦らず、丁寧に積み上げた言葉は、相手の心に深く根づきます。実感のある確かな伝え方が、揺るぎない信頼を生み出します。", "ma": "実感のこもった言葉を丁寧に積み上げる", "vk": "「物質的豊かさ」を引き寄せる力", "vd": "五感が満たされる環境、マイペースで安定したルーティンの中でこそ輝きます。本物志向の美的センスで、上質な素材感・伝統美・心地よさを見抜く目があります。心地よさを妥協せずに選んでいると、物質的な豊かさと確実な資産が向こうからやってきます。五感を満たすほどに、豊かさが物質化していくギフトです。", "va": "五感の心地よさを妥協せずに選び続ける", "synthesis": "この二つが重なるとき、あなたは\n「言葉と存在に揺るぎない重みを持つ存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実感のこもった言葉を丁寧に積み上げること"}, {"label": "在り方", "text": "五感の心地よさを妥協せずに選び続けること"}], "share": "私の存在の輝き方は「言葉と存在に揺るぎない重みを持つ存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡牛座:双子座": {"title": "信頼される知識と多様な繋がりを持つ存在", "mk": "言葉の重みと温もり", "md": "言葉に温もりと重みを宿す才能の持ち主。焦らず、丁寧に積み上げた言葉は、相手の心に深く根づきます。実感のある確かな伝え方が、揺るぎない信頼を生み出します。", "ma": "実感のこもった言葉を丁寧に積み上げる", "vk": "「旬の情報とチャンス」を引き寄せる力", "vd": "変化に富んだ環境、複業やパラレルな役割の中で輝きます。軽やかでトレンド感があり、言葉のセンスと遊び心ある美意識の持ち主です。好奇心のままに軽やかに動くだけで、今最も知りたい情報と面白い人脈が勝手に集まります。あなたがメディアになるほど、旬なチャンスが次々と舞い込むギフトです。", "va": "好奇心のままに軽やかに動いて情報を媒介する", "synthesis": "この二つが重なるとき、あなたは\n「信頼される知識と多様な繋がりを持つ存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実感のこもった言葉を丁寧に積み上げること"}, {"label": "在り方", "text": "好奇心のままに軽やかに動いて情報を媒介すること"}], "share": "私の存在の輝き方は「信頼される知識と多様な繋がりを持つ存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡牛座:蟹座": {"title": "温もりの二重奏で人を深く癒す存在", "mk": "言葉の重みと温もり", "md": "言葉に温もりと重みを宿す才能の持ち主。焦らず、丁寧に積み上げた言葉は、相手の心に深く根づきます。実感のある確かな伝え方が、揺るぎない信頼を生み出します。", "ma": "実感のこもった言葉を丁寧に積み上げる", "vk": "「絶対的な味方と居場所」を引き寄せる力", "vd": "家族のような信頼関係、在宅や温かいチーム作りの中で輝きます。懐かしく情緒的な、居心地の良い空間と手作り感の美意識を持っています。身近な人を慈しみ自分の感情を大切にしていると、困ったときに必ず助けてくれる仲間が整います。愛を与えるほど、守られる側にも回れるギフトです。", "va": "身近な人への温かさを大切にし、感情を丁寧に扱う", "synthesis": "この二つが重なるとき、あなたは\n「温もりの二重奏で人を深く癒す存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実感のこもった言葉を丁寧に積み上げること"}, {"label": "在り方", "text": "身近な人への温かさを大切にし、感情を丁寧に扱うこと"}], "share": "私の存在の輝き方は「温もりの二重奏で人を深く癒す存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡牛座:獅子座": {"title": "丁寧さと輝きで本物の豊かさを届ける存在", "mk": "言葉の重みと温もり", "md": "言葉に温もりと重みを宿す才能の持ち主。焦らず、丁寧に積み上げた言葉は、相手の心に深く根づきます。実感のある確かな伝え方が、揺るぎない信頼を生み出します。", "ma": "実感のこもった言葉を丁寧に積み上げる", "vk": "「賞賛とスポットライト」を引き寄せる力", "vd": "自己表現ができる華やかな場、称賛される立場の中で輝きます。ドラマチックで豪華、主役級の存在感とゴールドの輝きを放つ美意識があります。心から楽しみ堂々と表現しているだけで、憧れの視線と特別な待遇が引き寄せられます。あなたが輝けば輝くほど、世界があなたを主役として遇してくれるギフトです。", "va": "自分が心から楽しめることを最優先にして堂々と表現する", "synthesis": "この二つが重なるとき、あなたは\n「丁寧さと輝きで本物の豊かさを届ける存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実感のこもった言葉を丁寧に積み上げること"}, {"label": "在り方", "text": "自分が心から楽しめることを最優先にして堂々と表現すること"}], "share": "私の存在の輝き方は「丁寧さと輝きで本物の豊かさを届ける存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡牛座:乙女座": {"title": "誠実さと正確さで信頼を育む存在", "mk": "言葉の重みと温もり", "md": "言葉に温もりと重みを宿す才能の持ち主。焦らず、丁寧に積み上げた言葉は、相手の心に深く根づきます。実感のある確かな伝え方が、揺るぎない信頼を生み出します。", "ma": "実感のこもった言葉を丁寧に積み上げる", "vk": "「揺るぎない信頼と重用」を引き寄せる力", "vd": "整理された清潔な環境、実務・サポート・細部への貢献の中で輝きます。清潔で機能的なミニマルな美と、緻密なデザイン感覚を持っています。目の前のことを丁寧に整え誠実にサポートすると、「あなたにしか頼めない」という指名が積み上がります。整えるほどに、実利を伴う安定した需要がやってくるギフトです。", "va": "目の前を丁寧に整え、誠実にサポートに徹する", "synthesis": "この二つが重なるとき、あなたは\n「誠実さと正確さで信頼を育む存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実感のこもった言葉を丁寧に積み上げること"}, {"label": "在り方", "text": "目の前を丁寧に整え、誠実にサポートに徹すること"}], "share": "私の存在の輝き方は「誠実さと正確さで信頼を育む存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡牛座:天秤座": {"title": "美と豊かさを体現する存在", "mk": "言葉の重みと温もり", "md": "言葉に温もりと重みを宿す才能の持ち主。焦らず、丁寧に積み上げた言葉は、相手の心に深く根づきます。実感のある確かな伝え方が、揺るぎない信頼を生み出します。", "ma": "実感のこもった言葉を丁寧に積み上げる", "vk": "「人生を格上げする良縁」を引き寄せる力", "vd": "洗練された人間関係、交渉やデザイン・美に関わる場で輝きます。優雅で調和のとれたシンメトリーと万人受けする美意識を持っています。自分の美意識を磨き調和を保っているだけで、自分をより素敵な場所へ連れて行ってくれる人が現れます。あなたがエレガントであるほど、最高のパートナーシップが引き寄せられるギフトです。", "va": "美意識を磨いて、自分の世界の調和と洗練を保つ", "synthesis": "この二つが重なるとき、あなたは\n「美と豊かさを体現する存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実感のこもった言葉を丁寧に積み上げること"}, {"label": "在り方", "text": "美意識を磨いて、自分の世界の調和と洗練を保つこと"}], "share": "私の存在の輝き方は「美と豊かさを体現する存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡牛座:蠍座": {"title": "深みと重みで静かに変容をもたらす存在", "mk": "言葉の重みと温もり", "md": "言葉に温もりと重みを宿す才能の持ち主。焦らず、丁寧に積み上げた言葉は、相手の心に深く根づきます。実感のある確かな伝え方が、揺るぎない信頼を生み出します。", "ma": "実感のこもった言葉を丁寧に積み上げる", "vk": "「深い忠誠と受け継がれる遺産」を引き寄せる力", "vd": "一つのことに没頭できる環境、深い探求・秘密保持・変容の中で輝きます。深遠で神秘的、重厚な色彩とセクシーさ、核心を突く表現の美意識があります。本質を深く追求するほど、秘密の知恵や大きな権限、遺産のような重厚な富を託されます。深めるほどに、濃密な力と深い忠誠が集まるギフトです。", "va": "一つのことに深く潜り続け、本質の探求を手放さない", "synthesis": "この二つが重なるとき、あなたは\n「深みと重みで静かに変容をもたらす存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実感のこもった言葉を丁寧に積み上げること"}, {"label": "在り方", "text": "一つのことに深く潜り続け、本質の探求を手放さないこと"}], "share": "私の存在の輝き方は「深みと重みで静かに変容をもたらす存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡牛座:射手座": {"title": "確かな言葉で広い世界へ導く存在", "mk": "言葉の重みと温もり", "md": "言葉に温もりと重みを宿す才能の持ち主。焦らず、丁寧に積み上げた言葉は、相手の心に深く根づきます。実感のある確かな伝え方が、揺るぎない信頼を生み出します。", "ma": "実感のこもった言葉を丁寧に積み上げる", "vk": "「世界を広げる自由の切符」を引き寄せる力", "vd": "自由度が高く遠出できる環境、教育・哲学・海外関連の中で輝きます。開放的でダイナミック、異国情緒とラフなスタイルの自由な美意識があります。高い理想を掲げて学んでいると、海外との縁や未知の体験ができる招待状が届きます。遠くを見つめるほど、精神的・物理的な移動の自由が手に入るギフトです。", "va": "高い理想を掲げ学び続け、遠くに目を向けて行動する", "synthesis": "この二つが重なるとき、あなたは\n「確かな言葉で広い世界へ導く存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実感のこもった言葉を丁寧に積み上げること"}, {"label": "在り方", "text": "高い理想を掲げ学び続け、遠くに目を向けて行動すること"}], "share": "私の存在の輝き方は「確かな言葉で広い世界へ導く存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡牛座:山羊座": {"title": "実直と品格で時代を超える存在", "mk": "言葉の重みと温もり", "md": "言葉に温もりと重みを宿す才能の持ち主。焦らず、丁寧に積み上げた言葉は、相手の心に深く根づきます。実感のある確かな伝え方が、揺るぎない信頼を生み出します。", "ma": "実感のこもった言葉を丁寧に積み上げる", "vk": "「社会的地位と堅実な豊かさ」を引き寄せる力", "vd": "秩序があり成果が目に見える環境、経営・構築・野心の中で輝きます。クラシックで正統派、格式高い機能美と時間の重みある美意識を持っています。目的を持ってコツコツと形を作っていると、確固たる社会的地位と長期的な不労所得が残ります。誠実に「形」にするほど、社会的な敬意と報酬が定着していくギフトです。", "va": "目的を持ってコツコツと形を作り続ける", "synthesis": "この二つが重なるとき、あなたは\n「実直と品格で時代を超える存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実感のこもった言葉を丁寧に積み上げること"}, {"label": "在り方", "text": "目的を持ってコツコツと形を作り続けること"}], "share": "私の存在の輝き方は「実直と品格で時代を超える存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡牛座:水瓶座": {"title": "安定と革新を繋ぐ橋のような存在", "mk": "言葉の重みと温もり", "md": "言葉に温もりと重みを宿す才能の持ち主。焦らず、丁寧に積み上げた言葉は、相手の心に深く根づきます。実感のある確かな伝え方が、揺るぎない信頼を生み出します。", "ma": "実感のこもった言葉を丁寧に積み上げる", "vk": "「境界のない自由とつながり」を引き寄せる力", "vd": "自由でフラットな環境、テクノロジー・システム構築・変革の中で輝きます。先端でユニーク、近未来的な常識を覆すデザインの美意識を持っています。常識に囚われずフラットに考えているだけで、グローバルな人脈と革新的なアイデアが広がります。自由でいるほど、面白い未来が向こうからやってくるギフトです。", "va": "常識に囚われず自由にフラットに、革新的に考え行動する", "synthesis": "この二つが重なるとき、あなたは\n「安定と革新を繋ぐ橋のような存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実感のこもった言葉を丁寧に積み上げること"}, {"label": "在り方", "text": "常識に囚われず自由にフラットに、革新的に考え行動すること"}], "share": "私の存在の輝き方は「安定と革新を繋ぐ橋のような存在」。あなたはどのタイプ？ #存在が光る診断"}, "牡牛座:魚座": {"title": "実感と夢を結びつける存在", "mk": "言葉の重みと温もり", "md": "言葉に温もりと重みを宿す才能の持ち主。焦らず、丁寧に積み上げた言葉は、相手の心に深く根づきます。実感のある確かな伝え方が、揺るぎない信頼を生み出します。", "ma": "実感のこもった言葉を丁寧に積み上げる", "vk": "「魂を揺さぶるインスピレーション」を引き寄せる力", "vd": "境界線のない曖昧な環境、芸術・ヒーリング・スピリチュアルの中で輝きます。幻想的で情緒的、透き通る色と境界を溶かすアートの美意識を持っています。目に見えないものを信じて委ねていると、奇跡的なタイミングと魂を揺さぶる感動が溢れます。委ねるほどに、天の助け（シンクロニシティ）が頻発するギフトです。", "va": "目に見えないものを信じ、感覚と霊感に委ねて動く", "synthesis": "この二つが重なるとき、あなたは\n「実感と夢を結びつける存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実感のこもった言葉を丁寧に積み上げること"}, {"label": "在り方", "text": "目に見えないものを信じ、感覚と霊感に委ねて動くこと"}], "share": "私の存在の輝き方は「実感と夢を結びつける存在」。あなたはどのタイプ？ #存在が光る診断"}, "双子座:牡羊座": {"title": "アイデアと情熱でどこまでも駆け抜ける存在", "mk": "軽やかな多様性", "md": "アイデアと情報を軽やかに届ける才能の持ち主。多角的な視点と好奇心で言葉を紡ぎ、どんな相手とも橋を架けることができます。知的な遊び心があなたの伝え方の強みです。", "ma": "多様な切り口で情報を面白く届ける", "vk": "「はじまりの切符」を引き寄せる力", "vd": "自分が「一番乗り」できる環境、即断即決・短期集中の働き方があなたを輝かせます。直感的でエネルギッシュ、原色のような潔い美的センスを持っています。あなたが直感に従って動くとき、新しいチャンスやリーダーの椅子が自然と転がり込みます。頑張らなくても、なぜか「一番最初にたどり着く人」になるのがあなたのギフトです。", "va": "直感に従ってすぐ動く。一番乗りできる環境に身を置く", "synthesis": "この二つが重なるとき、あなたは\n「アイデアと情熱でどこまでも駆け抜ける存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "多様な切り口で情報を面白く届けること"}, {"label": "在り方", "text": "直感に従ってすぐ動く。一番乗りできる環境に身を置くこと"}], "share": "私の存在の輝き方は「アイデアと情熱でどこまでも駆け抜ける存在」。あなたはどのタイプ？ #存在が光る診断"}, "双子座:牡牛座": {"title": "知識と安心感で人を豊かにする存在", "mk": "軽やかな多様性", "md": "アイデアと情報を軽やかに届ける才能の持ち主。多角的な視点と好奇心で言葉を紡ぎ、どんな相手とも橋を架けることができます。知的な遊び心があなたの伝え方の強みです。", "ma": "多様な切り口で情報を面白く届ける", "vk": "「物質的豊かさ」を引き寄せる力", "vd": "五感が満たされる環境、マイペースで安定したルーティンの中でこそ輝きます。本物志向の美的センスで、上質な素材感・伝統美・心地よさを見抜く目があります。心地よさを妥協せずに選んでいると、物質的な豊かさと確実な資産が向こうからやってきます。五感を満たすほどに、豊かさが物質化していくギフトです。", "va": "五感の心地よさを妥協せずに選び続ける", "synthesis": "この二つが重なるとき、あなたは\n「知識と安心感で人を豊かにする存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "多様な切り口で情報を面白く届けること"}, {"label": "在り方", "text": "五感の心地よさを妥協せずに選び続けること"}], "share": "私の存在の輝き方は「知識と安心感で人を豊かにする存在」。あなたはどのタイプ？ #存在が光る診断"}, "双子座:双子座": {"title": "軽やかさと多様性が弾けるような存在", "mk": "軽やかな多様性", "md": "アイデアと情報を軽やかに届ける才能の持ち主。多角的な視点と好奇心で言葉を紡ぎ、どんな相手とも橋を架けることができます。知的な遊び心があなたの伝え方の強みです。", "ma": "多様な切り口で情報を面白く届ける", "vk": "「旬の情報とチャンス」を引き寄せる力", "vd": "変化に富んだ環境、複業やパラレルな役割の中で輝きます。軽やかでトレンド感があり、言葉のセンスと遊び心ある美意識の持ち主です。好奇心のままに軽やかに動くだけで、今最も知りたい情報と面白い人脈が勝手に集まります。あなたがメディアになるほど、旬なチャンスが次々と舞い込むギフトです。", "va": "好奇心のままに軽やかに動いて情報を媒介する", "synthesis": "この二つが重なるとき、あなたは\n「軽やかさと多様性が弾けるような存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "多様な切り口で情報を面白く届けること"}, {"label": "在り方", "text": "好奇心のままに軽やかに動いて情報を媒介すること"}], "share": "私の存在の輝き方は「軽やかさと多様性が弾けるような存在」。あなたはどのタイプ？ #存在が光る診断"}, "双子座:蟹座": {"title": "多彩な言葉で心に寄り添う存在", "mk": "軽やかな多様性", "md": "アイデアと情報を軽やかに届ける才能の持ち主。多角的な視点と好奇心で言葉を紡ぎ、どんな相手とも橋を架けることができます。知的な遊び心があなたの伝え方の強みです。", "ma": "多様な切り口で情報を面白く届ける", "vk": "「絶対的な味方と居場所」を引き寄せる力", "vd": "家族のような信頼関係、在宅や温かいチーム作りの中で輝きます。懐かしく情緒的な、居心地の良い空間と手作り感の美意識を持っています。身近な人を慈しみ自分の感情を大切にしていると、困ったときに必ず助けてくれる仲間が整います。愛を与えるほど、守られる側にも回れるギフトです。", "va": "身近な人への温かさを大切にし、感情を丁寧に扱う", "synthesis": "この二つが重なるとき、あなたは\n「多彩な言葉で心に寄り添う存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "多様な切り口で情報を面白く届けること"}, {"label": "在り方", "text": "身近な人への温かさを大切にし、感情を丁寧に扱うこと"}], "share": "私の存在の輝き方は「多彩な言葉で心に寄り添う存在」。あなたはどのタイプ？ #存在が光る診断"}, "双子座:獅子座": {"title": "言葉と輝きで人を魅了する存在", "mk": "軽やかな多様性", "md": "アイデアと情報を軽やかに届ける才能の持ち主。多角的な視点と好奇心で言葉を紡ぎ、どんな相手とも橋を架けることができます。知的な遊び心があなたの伝え方の強みです。", "ma": "多様な切り口で情報を面白く届ける", "vk": "「賞賛とスポットライト」を引き寄せる力", "vd": "自己表現ができる華やかな場、称賛される立場の中で輝きます。ドラマチックで豪華、主役級の存在感とゴールドの輝きを放つ美意識があります。心から楽しみ堂々と表現しているだけで、憧れの視線と特別な待遇が引き寄せられます。あなたが輝けば輝くほど、世界があなたを主役として遇してくれるギフトです。", "va": "自分が心から楽しめることを最優先にして堂々と表現する", "synthesis": "この二つが重なるとき、あなたは\n「言葉と輝きで人を魅了する存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "多様な切り口で情報を面白く届けること"}, {"label": "在り方", "text": "自分が心から楽しめることを最優先にして堂々と表現すること"}], "share": "私の存在の輝き方は「言葉と輝きで人を魅了する存在」。あなたはどのタイプ？ #存在が光る診断"}, "双子座:乙女座": {"title": "情報と誠実さで真に役立つ存在", "mk": "軽やかな多様性", "md": "アイデアと情報を軽やかに届ける才能の持ち主。多角的な視点と好奇心で言葉を紡ぎ、どんな相手とも橋を架けることができます。知的な遊び心があなたの伝え方の強みです。", "ma": "多様な切り口で情報を面白く届ける", "vk": "「揺るぎない信頼と重用」を引き寄せる力", "vd": "整理された清潔な環境、実務・サポート・細部への貢献の中で輝きます。清潔で機能的なミニマルな美と、緻密なデザイン感覚を持っています。目の前のことを丁寧に整え誠実にサポートすると、「あなたにしか頼めない」という指名が積み上がります。整えるほどに、実利を伴う安定した需要がやってくるギフトです。", "va": "目の前を丁寧に整え、誠実にサポートに徹する", "synthesis": "この二つが重なるとき、あなたは\n「情報と誠実さで真に役立つ存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "多様な切り口で情報を面白く届けること"}, {"label": "在り方", "text": "目の前を丁寧に整え、誠実にサポートに徹すること"}], "share": "私の存在の輝き方は「情報と誠実さで真に役立つ存在」。あなたはどのタイプ？ #存在が光る診断"}, "双子座:天秤座": {"title": "知と美が共鳴する存在", "mk": "軽やかな多様性", "md": "アイデアと情報を軽やかに届ける才能の持ち主。多角的な視点と好奇心で言葉を紡ぎ、どんな相手とも橋を架けることができます。知的な遊び心があなたの伝え方の強みです。", "ma": "多様な切り口で情報を面白く届ける", "vk": "「人生を格上げする良縁」を引き寄せる力", "vd": "洗練された人間関係、交渉やデザイン・美に関わる場で輝きます。優雅で調和のとれたシンメトリーと万人受けする美意識を持っています。自分の美意識を磨き調和を保っているだけで、自分をより素敵な場所へ連れて行ってくれる人が現れます。あなたがエレガントであるほど、最高のパートナーシップが引き寄せられるギフトです。", "va": "美意識を磨いて、自分の世界の調和と洗練を保つ", "synthesis": "この二つが重なるとき、あなたは\n「知と美が共鳴する存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "多様な切り口で情報を面白く届けること"}, {"label": "在り方", "text": "美意識を磨いて、自分の世界の調和と洗練を保つこと"}], "share": "私の存在の輝き方は「知と美が共鳴する存在」。あなたはどのタイプ？ #存在が光る診断"}, "双子座:蠍座": {"title": "表面と深層を行き来して真実に届く存在", "mk": "軽やかな多様性", "md": "アイデアと情報を軽やかに届ける才能の持ち主。多角的な視点と好奇心で言葉を紡ぎ、どんな相手とも橋を架けることができます。知的な遊び心があなたの伝え方の強みです。", "ma": "多様な切り口で情報を面白く届ける", "vk": "「深い忠誠と受け継がれる遺産」を引き寄せる力", "vd": "一つのことに没頭できる環境、深い探求・秘密保持・変容の中で輝きます。深遠で神秘的、重厚な色彩とセクシーさ、核心を突く表現の美意識があります。本質を深く追求するほど、秘密の知恵や大きな権限、遺産のような重厚な富を託されます。深めるほどに、濃密な力と深い忠誠が集まるギフトです。", "va": "一つのことに深く潜り続け、本質の探求を手放さない", "synthesis": "この二つが重なるとき、あなたは\n「表面と深層を行き来して真実に届く存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "多様な切り口で情報を面白く届けること"}, {"label": "在り方", "text": "一つのことに深く潜り続け、本質の探求を手放さないこと"}], "share": "私の存在の輝き方は「表面と深層を行き来して真実に届く存在」。あなたはどのタイプ？ #存在が光る診断"}, "双子座:射手座": {"title": "自由な言葉で地平を広げる存在", "mk": "軽やかな多様性", "md": "アイデアと情報を軽やかに届ける才能の持ち主。多角的な視点と好奇心で言葉を紡ぎ、どんな相手とも橋を架けることができます。知的な遊び心があなたの伝え方の強みです。", "ma": "多様な切り口で情報を面白く届ける", "vk": "「世界を広げる自由の切符」を引き寄せる力", "vd": "自由度が高く遠出できる環境、教育・哲学・海外関連の中で輝きます。開放的でダイナミック、異国情緒とラフなスタイルの自由な美意識があります。高い理想を掲げて学んでいると、海外との縁や未知の体験ができる招待状が届きます。遠くを見つめるほど、精神的・物理的な移動の自由が手に入るギフトです。", "va": "高い理想を掲げ学び続け、遠くに目を向けて行動する", "synthesis": "この二つが重なるとき、あなたは\n「自由な言葉で地平を広げる存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "多様な切り口で情報を面白く届けること"}, {"label": "在り方", "text": "高い理想を掲げ学び続け、遠くに目を向けて行動すること"}], "share": "私の存在の輝き方は「自由な言葉で地平を広げる存在」。あなたはどのタイプ？ #存在が光る診断"}, "双子座:山羊座": {"title": "軽やかさと品格を兼ね備えた存在", "mk": "軽やかな多様性", "md": "アイデアと情報を軽やかに届ける才能の持ち主。多角的な視点と好奇心で言葉を紡ぎ、どんな相手とも橋を架けることができます。知的な遊び心があなたの伝え方の強みです。", "ma": "多様な切り口で情報を面白く届ける", "vk": "「社会的地位と堅実な豊かさ」を引き寄せる力", "vd": "秩序があり成果が目に見える環境、経営・構築・野心の中で輝きます。クラシックで正統派、格式高い機能美と時間の重みある美意識を持っています。目的を持ってコツコツと形を作っていると、確固たる社会的地位と長期的な不労所得が残ります。誠実に「形」にするほど、社会的な敬意と報酬が定着していくギフトです。", "va": "目的を持ってコツコツと形を作り続ける", "synthesis": "この二つが重なるとき、あなたは\n「軽やかさと品格を兼ね備えた存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "多様な切り口で情報を面白く届けること"}, {"label": "在り方", "text": "目的を持ってコツコツと形を作り続けること"}], "share": "私の存在の輝き方は「軽やかさと品格を兼ね備えた存在」。あなたはどのタイプ？ #存在が光る診断"}, "双子座:水瓶座": {"title": "革新とコミュニケーションを体現する存在", "mk": "軽やかな多様性", "md": "アイデアと情報を軽やかに届ける才能の持ち主。多角的な視点と好奇心で言葉を紡ぎ、どんな相手とも橋を架けることができます。知的な遊び心があなたの伝え方の強みです。", "ma": "多様な切り口で情報を面白く届ける", "vk": "「境界のない自由とつながり」を引き寄せる力", "vd": "自由でフラットな環境、テクノロジー・システム構築・変革の中で輝きます。先端でユニーク、近未来的な常識を覆すデザインの美意識を持っています。常識に囚われずフラットに考えているだけで、グローバルな人脈と革新的なアイデアが広がります。自由でいるほど、面白い未来が向こうからやってくるギフトです。", "va": "常識に囚われず自由にフラットに、革新的に考え行動する", "synthesis": "この二つが重なるとき、あなたは\n「革新とコミュニケーションを体現する存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "多様な切り口で情報を面白く届けること"}, {"label": "在り方", "text": "常識に囚われず自由にフラットに、革新的に考え行動すること"}], "share": "私の存在の輝き方は「革新とコミュニケーションを体現する存在」。あなたはどのタイプ？ #存在が光る診断"}, "双子座:魚座": {"title": "言葉と夢が溶け合う存在", "mk": "軽やかな多様性", "md": "アイデアと情報を軽やかに届ける才能の持ち主。多角的な視点と好奇心で言葉を紡ぎ、どんな相手とも橋を架けることができます。知的な遊び心があなたの伝え方の強みです。", "ma": "多様な切り口で情報を面白く届ける", "vk": "「魂を揺さぶるインスピレーション」を引き寄せる力", "vd": "境界線のない曖昧な環境、芸術・ヒーリング・スピリチュアルの中で輝きます。幻想的で情緒的、透き通る色と境界を溶かすアートの美意識を持っています。目に見えないものを信じて委ねていると、奇跡的なタイミングと魂を揺さぶる感動が溢れます。委ねるほどに、天の助け（シンクロニシティ）が頻発するギフトです。", "va": "目に見えないものを信じ、感覚と霊感に委ねて動く", "synthesis": "この二つが重なるとき、あなたは\n「言葉と夢が溶け合う存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "多様な切り口で情報を面白く届けること"}, {"label": "在り方", "text": "目に見えないものを信じ、感覚と霊感に委ねて動くこと"}], "share": "私の存在の輝き方は「言葉と夢が溶け合う存在」。あなたはどのタイプ？ #存在が光る診断"}, "蟹座:牡羊座": {"title": "心の温もりを情熱で届ける存在", "mk": "感情と共感の言葉", "md": "感情と直感で相手の心を包む才能の持ち主。言葉よりも「場の空気感」で伝わることも多く、深い共感があなたの言葉の核にあります。心に寄り添う伝え方が最も輝きます。", "ma": "相手の感情に寄り添いながら丁寧に伝える", "vk": "「はじまりの切符」を引き寄せる力", "vd": "自分が「一番乗り」できる環境、即断即決・短期集中の働き方があなたを輝かせます。直感的でエネルギッシュ、原色のような潔い美的センスを持っています。あなたが直感に従って動くとき、新しいチャンスやリーダーの椅子が自然と転がり込みます。頑張らなくても、なぜか「一番最初にたどり着く人」になるのがあなたのギフトです。", "va": "直感に従ってすぐ動く。一番乗りできる環境に身を置く", "synthesis": "この二つが重なるとき、あなたは\n「心の温もりを情熱で届ける存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "相手の感情に寄り添いながら丁寧に伝えること"}, {"label": "在り方", "text": "直感に従ってすぐ動く。一番乗りできる環境に身を置くこと"}], "share": "私の存在の輝き方は「心の温もりを情熱で届ける存在」。あなたはどのタイプ？ #存在が光る診断"}, "蟹座:牡牛座": {"title": "深い共感と安心感で人を包む存在", "mk": "感情と共感の言葉", "md": "感情と直感で相手の心を包む才能の持ち主。言葉よりも「場の空気感」で伝わることも多く、深い共感があなたの言葉の核にあります。心に寄り添う伝え方が最も輝きます。", "ma": "相手の感情に寄り添いながら丁寧に伝える", "vk": "「物質的豊かさ」を引き寄せる力", "vd": "五感が満たされる環境、マイペースで安定したルーティンの中でこそ輝きます。本物志向の美的センスで、上質な素材感・伝統美・心地よさを見抜く目があります。心地よさを妥協せずに選んでいると、物質的な豊かさと確実な資産が向こうからやってきます。五感を満たすほどに、豊かさが物質化していくギフトです。", "va": "五感の心地よさを妥協せずに選び続ける", "synthesis": "この二つが重なるとき、あなたは\n「深い共感と安心感で人を包む存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "相手の感情に寄り添いながら丁寧に伝えること"}, {"label": "在り方", "text": "五感の心地よさを妥協せずに選び続けること"}], "share": "私の存在の輝き方は「深い共感と安心感で人を包む存在」。あなたはどのタイプ？ #存在が光る診断"}, "蟹座:双子座": {"title": "心と知恵で多彩に繋がる存在", "mk": "感情と共感の言葉", "md": "感情と直感で相手の心を包む才能の持ち主。言葉よりも「場の空気感」で伝わることも多く、深い共感があなたの言葉の核にあります。心に寄り添う伝え方が最も輝きます。", "ma": "相手の感情に寄り添いながら丁寧に伝える", "vk": "「旬の情報とチャンス」を引き寄せる力", "vd": "変化に富んだ環境、複業やパラレルな役割の中で輝きます。軽やかでトレンド感があり、言葉のセンスと遊び心ある美意識の持ち主です。好奇心のままに軽やかに動くだけで、今最も知りたい情報と面白い人脈が勝手に集まります。あなたがメディアになるほど、旬なチャンスが次々と舞い込むギフトです。", "va": "好奇心のままに軽やかに動いて情報を媒介する", "synthesis": "この二つが重なるとき、あなたは\n「心と知恵で多彩に繋がる存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "相手の感情に寄り添いながら丁寧に伝えること"}, {"label": "在り方", "text": "好奇心のままに軽やかに動いて情報を媒介すること"}], "share": "私の存在の輝き方は「心と知恵で多彩に繋がる存在」。あなたはどのタイプ？ #存在が光る診断"}, "蟹座:蟹座": {"title": "魂と魂で深く響き合う存在", "mk": "感情と共感の言葉", "md": "感情と直感で相手の心を包む才能の持ち主。言葉よりも「場の空気感」で伝わることも多く、深い共感があなたの言葉の核にあります。心に寄り添う伝え方が最も輝きます。", "ma": "相手の感情に寄り添いながら丁寧に伝える", "vk": "「絶対的な味方と居場所」を引き寄せる力", "vd": "家族のような信頼関係、在宅や温かいチーム作りの中で輝きます。懐かしく情緒的な、居心地の良い空間と手作り感の美意識を持っています。身近な人を慈しみ自分の感情を大切にしていると、困ったときに必ず助けてくれる仲間が整います。愛を与えるほど、守られる側にも回れるギフトです。", "va": "身近な人への温かさを大切にし、感情を丁寧に扱う", "synthesis": "この二つが重なるとき、あなたは\n「魂と魂で深く響き合う存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "相手の感情に寄り添いながら丁寧に伝えること"}, {"label": "在り方", "text": "身近な人への温かさを大切にし、感情を丁寧に扱うこと"}], "share": "私の存在の輝き方は「魂と魂で深く響き合う存在」。あなたはどのタイプ？ #存在が光る診断"}, "蟹座:獅子座": {"title": "愛の温もりと輝きで照らす存在", "mk": "感情と共感の言葉", "md": "感情と直感で相手の心を包む才能の持ち主。言葉よりも「場の空気感」で伝わることも多く、深い共感があなたの言葉の核にあります。心に寄り添う伝え方が最も輝きます。", "ma": "相手の感情に寄り添いながら丁寧に伝える", "vk": "「賞賛とスポットライト」を引き寄せる力", "vd": "自己表現ができる華やかな場、称賛される立場の中で輝きます。ドラマチックで豪華、主役級の存在感とゴールドの輝きを放つ美意識があります。心から楽しみ堂々と表現しているだけで、憧れの視線と特別な待遇が引き寄せられます。あなたが輝けば輝くほど、世界があなたを主役として遇してくれるギフトです。", "va": "自分が心から楽しめることを最優先にして堂々と表現する", "synthesis": "この二つが重なるとき、あなたは\n「愛の温もりと輝きで照らす存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "相手の感情に寄り添いながら丁寧に伝えること"}, {"label": "在り方", "text": "自分が心から楽しめることを最優先にして堂々と表現すること"}], "share": "私の存在の輝き方は「愛の温もりと輝きで照らす存在」。あなたはどのタイプ？ #存在が光る診断"}, "蟹座:乙女座": {"title": "心と誠実さで本質的に寄り添う存在", "mk": "感情と共感の言葉", "md": "感情と直感で相手の心を包む才能の持ち主。言葉よりも「場の空気感」で伝わることも多く、深い共感があなたの言葉の核にあります。心に寄り添う伝え方が最も輝きます。", "ma": "相手の感情に寄り添いながら丁寧に伝える", "vk": "「揺るぎない信頼と重用」を引き寄せる力", "vd": "整理された清潔な環境、実務・サポート・細部への貢献の中で輝きます。清潔で機能的なミニマルな美と、緻密なデザイン感覚を持っています。目の前のことを丁寧に整え誠実にサポートすると、「あなたにしか頼めない」という指名が積み上がります。整えるほどに、実利を伴う安定した需要がやってくるギフトです。", "va": "目の前を丁寧に整え、誠実にサポートに徹する", "synthesis": "この二つが重なるとき、あなたは\n「心と誠実さで本質的に寄り添う存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "相手の感情に寄り添いながら丁寧に伝えること"}, {"label": "在り方", "text": "目の前を丁寧に整え、誠実にサポートに徹すること"}], "share": "私の存在の輝き方は「心と誠実さで本質的に寄り添う存在」。あなたはどのタイプ？ #存在が光る診断"}, "蟹座:天秤座": {"title": "共感と美しさで調和を生む存在", "mk": "感情と共感の言葉", "md": "感情と直感で相手の心を包む才能の持ち主。言葉よりも「場の空気感」で伝わることも多く、深い共感があなたの言葉の核にあります。心に寄り添う伝え方が最も輝きます。", "ma": "相手の感情に寄り添いながら丁寧に伝える", "vk": "「人生を格上げする良縁」を引き寄せる力", "vd": "洗練された人間関係、交渉やデザイン・美に関わる場で輝きます。優雅で調和のとれたシンメトリーと万人受けする美意識を持っています。自分の美意識を磨き調和を保っているだけで、自分をより素敵な場所へ連れて行ってくれる人が現れます。あなたがエレガントであるほど、最高のパートナーシップが引き寄せられるギフトです。", "va": "美意識を磨いて、自分の世界の調和と洗練を保つ", "synthesis": "この二つが重なるとき、あなたは\n「共感と美しさで調和を生む存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "相手の感情に寄り添いながら丁寧に伝えること"}, {"label": "在り方", "text": "美意識を磨いて、自分の世界の調和と洗練を保つこと"}], "share": "私の存在の輝き方は「共感と美しさで調和を生む存在」。あなたはどのタイプ？ #存在が光る診断"}, "蟹座:蠍座": {"title": "魂の奥底に触れる圧倒的な共鳴を持つ存在", "mk": "感情と共感の言葉", "md": "感情と直感で相手の心を包む才能の持ち主。言葉よりも「場の空気感」で伝わることも多く、深い共感があなたの言葉の核にあります。心に寄り添う伝え方が最も輝きます。", "ma": "相手の感情に寄り添いながら丁寧に伝える", "vk": "「深い忠誠と受け継がれる遺産」を引き寄せる力", "vd": "一つのことに没頭できる環境、深い探求・秘密保持・変容の中で輝きます。深遠で神秘的、重厚な色彩とセクシーさ、核心を突く表現の美意識があります。本質を深く追求するほど、秘密の知恵や大きな権限、遺産のような重厚な富を託されます。深めるほどに、濃密な力と深い忠誠が集まるギフトです。", "va": "一つのことに深く潜り続け、本質の探求を手放さない", "synthesis": "この二つが重なるとき、あなたは\n「魂の奥底に触れる圧倒的な共鳴を持つ存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "相手の感情に寄り添いながら丁寧に伝えること"}, {"label": "在り方", "text": "一つのことに深く潜り続け、本質の探求を手放さないこと"}], "share": "私の存在の輝き方は「魂の奥底に触れる圧倒的な共鳴を持つ存在」。あなたはどのタイプ？ #存在が光る診断"}, "蟹座:射手座": {"title": "温かさと広い視野を持つ存在", "mk": "感情と共感の言葉", "md": "感情と直感で相手の心を包む才能の持ち主。言葉よりも「場の空気感」で伝わることも多く、深い共感があなたの言葉の核にあります。心に寄り添う伝え方が最も輝きます。", "ma": "相手の感情に寄り添いながら丁寧に伝える", "vk": "「世界を広げる自由の切符」を引き寄せる力", "vd": "自由度が高く遠出できる環境、教育・哲学・海外関連の中で輝きます。開放的でダイナミック、異国情緒とラフなスタイルの自由な美意識があります。高い理想を掲げて学んでいると、海外との縁や未知の体験ができる招待状が届きます。遠くを見つめるほど、精神的・物理的な移動の自由が手に入るギフトです。", "va": "高い理想を掲げ学び続け、遠くに目を向けて行動する", "synthesis": "この二つが重なるとき、あなたは\n「温かさと広い視野を持つ存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "相手の感情に寄り添いながら丁寧に伝えること"}, {"label": "在り方", "text": "高い理想を掲げ学び続け、遠くに目を向けて行動すること"}], "share": "私の存在の輝き方は「温かさと広い視野を持つ存在」。あなたはどのタイプ？ #存在が光る診断"}, "蟹座:山羊座": {"title": "感情と実力で人を守る存在", "mk": "感情と共感の言葉", "md": "感情と直感で相手の心を包む才能の持ち主。言葉よりも「場の空気感」で伝わることも多く、深い共感があなたの言葉の核にあります。心に寄り添う伝え方が最も輝きます。", "ma": "相手の感情に寄り添いながら丁寧に伝える", "vk": "「社会的地位と堅実な豊かさ」を引き寄せる力", "vd": "秩序があり成果が目に見える環境、経営・構築・野心の中で輝きます。クラシックで正統派、格式高い機能美と時間の重みある美意識を持っています。目的を持ってコツコツと形を作っていると、確固たる社会的地位と長期的な不労所得が残ります。誠実に「形」にするほど、社会的な敬意と報酬が定着していくギフトです。", "va": "目的を持ってコツコツと形を作り続ける", "synthesis": "この二つが重なるとき、あなたは\n「感情と実力で人を守る存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "相手の感情に寄り添いながら丁寧に伝えること"}, {"label": "在り方", "text": "目的を持ってコツコツと形を作り続けること"}], "share": "私の存在の輝き方は「感情と実力で人を守る存在」。あなたはどのタイプ？ #存在が光る診断"}, "蟹座:水瓶座": {"title": "感性と未来思考で人を導く存在", "mk": "感情と共感の言葉", "md": "感情と直感で相手の心を包む才能の持ち主。言葉よりも「場の空気感」で伝わることも多く、深い共感があなたの言葉の核にあります。心に寄り添う伝え方が最も輝きます。", "ma": "相手の感情に寄り添いながら丁寧に伝える", "vk": "「境界のない自由とつながり」を引き寄せる力", "vd": "自由でフラットな環境、テクノロジー・システム構築・変革の中で輝きます。先端でユニーク、近未来的な常識を覆すデザインの美意識を持っています。常識に囚われずフラットに考えているだけで、グローバルな人脈と革新的なアイデアが広がります。自由でいるほど、面白い未来が向こうからやってくるギフトです。", "va": "常識に囚われず自由にフラットに、革新的に考え行動する", "synthesis": "この二つが重なるとき、あなたは\n「感性と未来思考で人を導く存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "相手の感情に寄り添いながら丁寧に伝えること"}, {"label": "在り方", "text": "常識に囚われず自由にフラットに、革新的に考え行動すること"}], "share": "私の存在の輝き方は「感性と未来思考で人を導く存在」。あなたはどのタイプ？ #存在が光る診断"}, "蟹座:魚座": {"title": "愛と夢で世界を優しく溶かす存在", "mk": "感情と共感の言葉", "md": "感情と直感で相手の心を包む才能の持ち主。言葉よりも「場の空気感」で伝わることも多く、深い共感があなたの言葉の核にあります。心に寄り添う伝え方が最も輝きます。", "ma": "相手の感情に寄り添いながら丁寧に伝える", "vk": "「魂を揺さぶるインスピレーション」を引き寄せる力", "vd": "境界線のない曖昧な環境、芸術・ヒーリング・スピリチュアルの中で輝きます。幻想的で情緒的、透き通る色と境界を溶かすアートの美意識を持っています。目に見えないものを信じて委ねていると、奇跡的なタイミングと魂を揺さぶる感動が溢れます。委ねるほどに、天の助け（シンクロニシティ）が頻発するギフトです。", "va": "目に見えないものを信じ、感覚と霊感に委ねて動く", "synthesis": "この二つが重なるとき、あなたは\n「愛と夢で世界を優しく溶かす存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "相手の感情に寄り添いながら丁寧に伝えること"}, {"label": "在り方", "text": "目に見えないものを信じ、感覚と霊感に委ねて動くこと"}], "share": "私の存在の輝き方は「愛と夢で世界を優しく溶かす存在」。あなたはどのタイプ？ #存在が光る診断"}, "獅子座:牡羊座": {"title": "炎と炎が重なり世界を動かす存在", "mk": "情熱と表現力", "md": "存在そのもので伝える表現者。情熱と輝きで人を鼓舞し、聴く人の心に「自分もできる」という火を灯します。ドラマチックなストーリーテリングがあなたの才能の核です。", "ma": "自分の体験と情熱を堂々と語る", "vk": "「はじまりの切符」を引き寄せる力", "vd": "自分が「一番乗り」できる環境、即断即決・短期集中の働き方があなたを輝かせます。直感的でエネルギッシュ、原色のような潔い美的センスを持っています。あなたが直感に従って動くとき、新しいチャンスやリーダーの椅子が自然と転がり込みます。頑張らなくても、なぜか「一番最初にたどり着く人」になるのがあなたのギフトです。", "va": "直感に従ってすぐ動く。一番乗りできる環境に身を置く", "synthesis": "この二つが重なるとき、あなたは\n「炎と炎が重なり世界を動かす存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "自分の体験と情熱を堂々と語ること"}, {"label": "在り方", "text": "直感に従ってすぐ動く。一番乗りできる環境に身を置くこと"}], "share": "私の存在の輝き方は「炎と炎が重なり世界を動かす存在」。あなたはどのタイプ？ #存在が光る診断"}, "獅子座:牡牛座": {"title": "輝きと豊かさで人を満たす存在", "mk": "情熱と表現力", "md": "存在そのもので伝える表現者。情熱と輝きで人を鼓舞し、聴く人の心に「自分もできる」という火を灯します。ドラマチックなストーリーテリングがあなたの才能の核です。", "ma": "自分の体験と情熱を堂々と語る", "vk": "「物質的豊かさ」を引き寄せる力", "vd": "五感が満たされる環境、マイペースで安定したルーティンの中でこそ輝きます。本物志向の美的センスで、上質な素材感・伝統美・心地よさを見抜く目があります。心地よさを妥協せずに選んでいると、物質的な豊かさと確実な資産が向こうからやってきます。五感を満たすほどに、豊かさが物質化していくギフトです。", "va": "五感の心地よさを妥協せずに選び続ける", "synthesis": "この二つが重なるとき、あなたは\n「輝きと豊かさで人を満たす存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "自分の体験と情熱を堂々と語ること"}, {"label": "在り方", "text": "五感の心地よさを妥協せずに選び続けること"}], "share": "私の存在の輝き方は「輝きと豊かさで人を満たす存在」。あなたはどのタイプ？ #存在が光る診断"}, "獅子座:双子座": {"title": "存在感と知性で人を引き付ける存在", "mk": "情熱と表現力", "md": "存在そのもので伝える表現者。情熱と輝きで人を鼓舞し、聴く人の心に「自分もできる」という火を灯します。ドラマチックなストーリーテリングがあなたの才能の核です。", "ma": "自分の体験と情熱を堂々と語る", "vk": "「旬の情報とチャンス」を引き寄せる力", "vd": "変化に富んだ環境、複業やパラレルな役割の中で輝きます。軽やかでトレンド感があり、言葉のセンスと遊び心ある美意識の持ち主です。好奇心のままに軽やかに動くだけで、今最も知りたい情報と面白い人脈が勝手に集まります。あなたがメディアになるほど、旬なチャンスが次々と舞い込むギフトです。", "va": "好奇心のままに軽やかに動いて情報を媒介する", "synthesis": "この二つが重なるとき、あなたは\n「存在感と知性で人を引き付ける存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "自分の体験と情熱を堂々と語ること"}, {"label": "在り方", "text": "好奇心のままに軽やかに動いて情報を媒介すること"}], "share": "私の存在の輝き方は「存在感と知性で人を引き付ける存在」。あなたはどのタイプ？ #存在が光る診断"}, "獅子座:蟹座": {"title": "太陽と月のように人を包み込む光の存在", "mk": "情熱と表現力", "md": "存在そのもので伝える表現者。情熱と輝きで人を鼓舞し、聴く人の心に「自分もできる」という火を灯します。ドラマチックなストーリーテリングがあなたの才能の核です。", "ma": "自分の体験と情熱を堂々と語る", "vk": "「絶対的な味方と居場所」を引き寄せる力", "vd": "家族のような信頼関係、在宅や温かいチーム作りの中で輝きます。懐かしく情緒的な、居心地の良い空間と手作り感の美意識を持っています。身近な人を慈しみ自分の感情を大切にしていると、困ったときに必ず助けてくれる仲間が整います。愛を与えるほど、守られる側にも回れるギフトです。", "va": "身近な人への温かさを大切にし、感情を丁寧に扱う", "synthesis": "この二つが重なるとき、あなたは\n「太陽と月のように人を包み込む光の存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "自分の体験と情熱を堂々と語ること"}, {"label": "在り方", "text": "身近な人への温かさを大切にし、感情を丁寧に扱うこと"}], "share": "私の存在の輝き方は「太陽と月のように人を包み込む光の存在」。あなたはどのタイプ？ #存在が光る診断"}, "獅子座:獅子座": {"title": "圧倒的な輝きで人を照らす存在", "mk": "情熱と表現力", "md": "存在そのもので伝える表現者。情熱と輝きで人を鼓舞し、聴く人の心に「自分もできる」という火を灯します。ドラマチックなストーリーテリングがあなたの才能の核です。", "ma": "自分の体験と情熱を堂々と語る", "vk": "「賞賛とスポットライト」を引き寄せる力", "vd": "自己表現ができる華やかな場、称賛される立場の中で輝きます。ドラマチックで豪華、主役級の存在感とゴールドの輝きを放つ美意識があります。心から楽しみ堂々と表現しているだけで、憧れの視線と特別な待遇が引き寄せられます。あなたが輝けば輝くほど、世界があなたを主役として遇してくれるギフトです。", "va": "自分が心から楽しめることを最優先にして堂々と表現する", "synthesis": "この二つが重なるとき、あなたは\n「圧倒的な輝きで人を照らす存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "自分の体験と情熱を堂々と語ること"}, {"label": "在り方", "text": "自分が心から楽しめることを最優先にして堂々と表現すること"}], "share": "私の存在の輝き方は「圧倒的な輝きで人を照らす存在」。あなたはどのタイプ？ #存在が光る診断"}, "獅子座:乙女座": {"title": "輝きと誠実さを兼ね備えた存在", "mk": "情熱と表現力", "md": "存在そのもので伝える表現者。情熱と輝きで人を鼓舞し、聴く人の心に「自分もできる」という火を灯します。ドラマチックなストーリーテリングがあなたの才能の核です。", "ma": "自分の体験と情熱を堂々と語る", "vk": "「揺るぎない信頼と重用」を引き寄せる力", "vd": "整理された清潔な環境、実務・サポート・細部への貢献の中で輝きます。清潔で機能的なミニマルな美と、緻密なデザイン感覚を持っています。目の前のことを丁寧に整え誠実にサポートすると、「あなたにしか頼めない」という指名が積み上がります。整えるほどに、実利を伴う安定した需要がやってくるギフトです。", "va": "目の前を丁寧に整え、誠実にサポートに徹する", "synthesis": "この二つが重なるとき、あなたは\n「輝きと誠実さを兼ね備えた存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "自分の体験と情熱を堂々と語ること"}, {"label": "在り方", "text": "目の前を丁寧に整え、誠実にサポートに徹すること"}], "share": "私の存在の輝き方は「輝きと誠実さを兼ね備えた存在」。あなたはどのタイプ？ #存在が光る診断"}, "獅子座:天秤座": {"title": "美と輝きで世界を彩る存在", "mk": "情熱と表現力", "md": "存在そのもので伝える表現者。情熱と輝きで人を鼓舞し、聴く人の心に「自分もできる」という火を灯します。ドラマチックなストーリーテリングがあなたの才能の核です。", "ma": "自分の体験と情熱を堂々と語る", "vk": "「人生を格上げする良縁」を引き寄せる力", "vd": "洗練された人間関係、交渉やデザイン・美に関わる場で輝きます。優雅で調和のとれたシンメトリーと万人受けする美意識を持っています。自分の美意識を磨き調和を保っているだけで、自分をより素敵な場所へ連れて行ってくれる人が現れます。あなたがエレガントであるほど、最高のパートナーシップが引き寄せられるギフトです。", "va": "美意識を磨いて、自分の世界の調和と洗練を保つ", "synthesis": "この二つが重なるとき、あなたは\n「美と輝きで世界を彩る存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "自分の体験と情熱を堂々と語ること"}, {"label": "在り方", "text": "美意識を磨いて、自分の世界の調和と洗練を保つこと"}], "share": "私の存在の輝き方は「美と輝きで世界を彩る存在」。あなたはどのタイプ？ #存在が光る診断"}, "獅子座:蠍座": {"title": "表の輝きと内なる深さを持つ存在", "mk": "情熱と表現力", "md": "存在そのもので伝える表現者。情熱と輝きで人を鼓舞し、聴く人の心に「自分もできる」という火を灯します。ドラマチックなストーリーテリングがあなたの才能の核です。", "ma": "自分の体験と情熱を堂々と語る", "vk": "「深い忠誠と受け継がれる遺産」を引き寄せる力", "vd": "一つのことに没頭できる環境、深い探求・秘密保持・変容の中で輝きます。深遠で神秘的、重厚な色彩とセクシーさ、核心を突く表現の美意識があります。本質を深く追求するほど、秘密の知恵や大きな権限、遺産のような重厚な富を託されます。深めるほどに、濃密な力と深い忠誠が集まるギフトです。", "va": "一つのことに深く潜り続け、本質の探求を手放さない", "synthesis": "この二つが重なるとき、あなたは\n「表の輝きと内なる深さを持つ存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "自分の体験と情熱を堂々と語ること"}, {"label": "在り方", "text": "一つのことに深く潜り続け、本質の探求を手放さないこと"}], "share": "私の存在の輝き方は「表の輝きと内なる深さを持つ存在」。あなたはどのタイプ？ #存在が光る診断"}, "獅子座:射手座": {"title": "自由と輝きで人の魂に火を灯す存在", "mk": "情熱と表現力", "md": "存在そのもので伝える表現者。情熱と輝きで人を鼓舞し、聴く人の心に「自分もできる」という火を灯します。ドラマチックなストーリーテリングがあなたの才能の核です。", "ma": "自分の体験と情熱を堂々と語る", "vk": "「世界を広げる自由の切符」を引き寄せる力", "vd": "自由度が高く遠出できる環境、教育・哲学・海外関連の中で輝きます。開放的でダイナミック、異国情緒とラフなスタイルの自由な美意識があります。高い理想を掲げて学んでいると、海外との縁や未知の体験ができる招待状が届きます。遠くを見つめるほど、精神的・物理的な移動の自由が手に入るギフトです。", "va": "高い理想を掲げ学び続け、遠くに目を向けて行動する", "synthesis": "この二つが重なるとき、あなたは\n「自由と輝きで人の魂に火を灯す存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "自分の体験と情熱を堂々と語ること"}, {"label": "在り方", "text": "高い理想を掲げ学び続け、遠くに目を向けて行動すること"}], "share": "私の存在の輝き方は「自由と輝きで人の魂に火を灯す存在」。あなたはどのタイプ？ #存在が光る診断"}, "獅子座:山羊座": {"title": "輝きと品格で人の憧れになる存在", "mk": "情熱と表現力", "md": "存在そのもので伝える表現者。情熱と輝きで人を鼓舞し、聴く人の心に「自分もできる」という火を灯します。ドラマチックなストーリーテリングがあなたの才能の核です。", "ma": "自分の体験と情熱を堂々と語る", "vk": "「社会的地位と堅実な豊かさ」を引き寄せる力", "vd": "秩序があり成果が目に見える環境、経営・構築・野心の中で輝きます。クラシックで正統派、格式高い機能美と時間の重みある美意識を持っています。目的を持ってコツコツと形を作っていると、確固たる社会的地位と長期的な不労所得が残ります。誠実に「形」にするほど、社会的な敬意と報酬が定着していくギフトです。", "va": "目的を持ってコツコツと形を作り続ける", "synthesis": "この二つが重なるとき、あなたは\n「輝きと品格で人の憧れになる存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "自分の体験と情熱を堂々と語ること"}, {"label": "在り方", "text": "目的を持ってコツコツと形を作り続けること"}], "share": "私の存在の輝き方は「輝きと品格で人の憧れになる存在」。あなたはどのタイプ？ #存在が光る診断"}, "獅子座:水瓶座": {"title": "個性の輝きで未来を照らす存在", "mk": "情熱と表現力", "md": "存在そのもので伝える表現者。情熱と輝きで人を鼓舞し、聴く人の心に「自分もできる」という火を灯します。ドラマチックなストーリーテリングがあなたの才能の核です。", "ma": "自分の体験と情熱を堂々と語る", "vk": "「境界のない自由とつながり」を引き寄せる力", "vd": "自由でフラットな環境、テクノロジー・システム構築・変革の中で輝きます。先端でユニーク、近未来的な常識を覆すデザインの美意識を持っています。常識に囚われずフラットに考えているだけで、グローバルな人脈と革新的なアイデアが広がります。自由でいるほど、面白い未来が向こうからやってくるギフトです。", "va": "常識に囚われず自由にフラットに、革新的に考え行動する", "synthesis": "この二つが重なるとき、あなたは\n「個性の輝きで未来を照らす存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "自分の体験と情熱を堂々と語ること"}, {"label": "在り方", "text": "常識に囚われず自由にフラットに、革新的に考え行動すること"}], "share": "私の存在の輝き方は「個性の輝きで未来を照らす存在」。あなたはどのタイプ？ #存在が光る診断"}, "獅子座:魚座": {"title": "光と夢で人の心を満たす存在", "mk": "情熱と表現力", "md": "存在そのもので伝える表現者。情熱と輝きで人を鼓舞し、聴く人の心に「自分もできる」という火を灯します。ドラマチックなストーリーテリングがあなたの才能の核です。", "ma": "自分の体験と情熱を堂々と語る", "vk": "「魂を揺さぶるインスピレーション」を引き寄せる力", "vd": "境界線のない曖昧な環境、芸術・ヒーリング・スピリチュアルの中で輝きます。幻想的で情緒的、透き通る色と境界を溶かすアートの美意識を持っています。目に見えないものを信じて委ねていると、奇跡的なタイミングと魂を揺さぶる感動が溢れます。委ねるほどに、天の助け（シンクロニシティ）が頻発するギフトです。", "va": "目に見えないものを信じ、感覚と霊感に委ねて動く", "synthesis": "この二つが重なるとき、あなたは\n「光と夢で人の心を満たす存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "自分の体験と情熱を堂々と語ること"}, {"label": "在り方", "text": "目に見えないものを信じ、感覚と霊感に委ねて動くこと"}], "share": "私の存在の輝き方は「光と夢で人の心を満たす存在」。あなたはどのタイプ？ #存在が光る診断"}, "乙女座:牡羊座": {"title": "誠実さと情熱で突き抜ける存在", "mk": "丁寧さと正確さ", "md": "細部と正確さで本当に役立つことを届ける才能の持ち主。丁寧な観察から生まれる言葉は、相手の本当の課題に届きます。実用性と誠実さが深い信頼を生み出します。", "ma": "丁寧に分析して具体的で実用的に伝える", "vk": "「はじまりの切符」を引き寄せる力", "vd": "自分が「一番乗り」できる環境、即断即決・短期集中の働き方があなたを輝かせます。直感的でエネルギッシュ、原色のような潔い美的センスを持っています。あなたが直感に従って動くとき、新しいチャンスやリーダーの椅子が自然と転がり込みます。頑張らなくても、なぜか「一番最初にたどり着く人」になるのがあなたのギフトです。", "va": "直感に従ってすぐ動く。一番乗りできる環境に身を置く", "synthesis": "この二つが重なるとき、あなたは\n「誠実さと情熱で突き抜ける存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "丁寧に分析して具体的で実用的に伝えること"}, {"label": "在り方", "text": "直感に従ってすぐ動く。一番乗りできる環境に身を置くこと"}], "share": "私の存在の輝き方は「誠実さと情熱で突き抜ける存在」。あなたはどのタイプ？ #存在が光る診断"}, "乙女座:牡牛座": {"title": "丁寧さと豊かさで本物を届ける存在", "mk": "丁寧さと正確さ", "md": "細部と正確さで本当に役立つことを届ける才能の持ち主。丁寧な観察から生まれる言葉は、相手の本当の課題に届きます。実用性と誠実さが深い信頼を生み出します。", "ma": "丁寧に分析して具体的で実用的に伝える", "vk": "「物質的豊かさ」を引き寄せる力", "vd": "五感が満たされる環境、マイペースで安定したルーティンの中でこそ輝きます。本物志向の美的センスで、上質な素材感・伝統美・心地よさを見抜く目があります。心地よさを妥協せずに選んでいると、物質的な豊かさと確実な資産が向こうからやってきます。五感を満たすほどに、豊かさが物質化していくギフトです。", "va": "五感の心地よさを妥協せずに選び続ける", "synthesis": "この二つが重なるとき、あなたは\n「丁寧さと豊かさで本物を届ける存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "丁寧に分析して具体的で実用的に伝えること"}, {"label": "在り方", "text": "五感の心地よさを妥協せずに選び続けること"}], "share": "私の存在の輝き方は「丁寧さと豊かさで本物を届ける存在」。あなたはどのタイプ？ #存在が光る診断"}, "乙女座:双子座": {"title": "分析と多様性で世界を解き明かす存在", "mk": "丁寧さと正確さ", "md": "細部と正確さで本当に役立つことを届ける才能の持ち主。丁寧な観察から生まれる言葉は、相手の本当の課題に届きます。実用性と誠実さが深い信頼を生み出します。", "ma": "丁寧に分析して具体的で実用的に伝える", "vk": "「旬の情報とチャンス」を引き寄せる力", "vd": "変化に富んだ環境、複業やパラレルな役割の中で輝きます。軽やかでトレンド感があり、言葉のセンスと遊び心ある美意識の持ち主です。好奇心のままに軽やかに動くだけで、今最も知りたい情報と面白い人脈が勝手に集まります。あなたがメディアになるほど、旬なチャンスが次々と舞い込むギフトです。", "va": "好奇心のままに軽やかに動いて情報を媒介する", "synthesis": "この二つが重なるとき、あなたは\n「分析と多様性で世界を解き明かす存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "丁寧に分析して具体的で実用的に伝えること"}, {"label": "在り方", "text": "好奇心のままに軽やかに動いて情報を媒介すること"}], "share": "私の存在の輝き方は「分析と多様性で世界を解き明かす存在」。あなたはどのタイプ？ #存在が光る診断"}, "乙女座:蟹座": {"title": "細やかな愛情で人を支える存在", "mk": "丁寧さと正確さ", "md": "細部と正確さで本当に役立つことを届ける才能の持ち主。丁寧な観察から生まれる言葉は、相手の本当の課題に届きます。実用性と誠実さが深い信頼を生み出します。", "ma": "丁寧に分析して具体的で実用的に伝える", "vk": "「絶対的な味方と居場所」を引き寄せる力", "vd": "家族のような信頼関係、在宅や温かいチーム作りの中で輝きます。懐かしく情緒的な、居心地の良い空間と手作り感の美意識を持っています。身近な人を慈しみ自分の感情を大切にしていると、困ったときに必ず助けてくれる仲間が整います。愛を与えるほど、守られる側にも回れるギフトです。", "va": "身近な人への温かさを大切にし、感情を丁寧に扱う", "synthesis": "この二つが重なるとき、あなたは\n「細やかな愛情で人を支える存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "丁寧に分析して具体的で実用的に伝えること"}, {"label": "在り方", "text": "身近な人への温かさを大切にし、感情を丁寧に扱うこと"}], "share": "私の存在の輝き方は「細やかな愛情で人を支える存在」。あなたはどのタイプ？ #存在が光る診断"}, "乙女座:獅子座": {"title": "完璧な実力と輝きを持つ存在", "mk": "丁寧さと正確さ", "md": "細部と正確さで本当に役立つことを届ける才能の持ち主。丁寧な観察から生まれる言葉は、相手の本当の課題に届きます。実用性と誠実さが深い信頼を生み出します。", "ma": "丁寧に分析して具体的で実用的に伝える", "vk": "「賞賛とスポットライト」を引き寄せる力", "vd": "自己表現ができる華やかな場、称賛される立場の中で輝きます。ドラマチックで豪華、主役級の存在感とゴールドの輝きを放つ美意識があります。心から楽しみ堂々と表現しているだけで、憧れの視線と特別な待遇が引き寄せられます。あなたが輝けば輝くほど、世界があなたを主役として遇してくれるギフトです。", "va": "自分が心から楽しめることを最優先にして堂々と表現する", "synthesis": "この二つが重なるとき、あなたは\n「完璧な実力と輝きを持つ存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "丁寧に分析して具体的で実用的に伝えること"}, {"label": "在り方", "text": "自分が心から楽しめることを最優先にして堂々と表現すること"}], "share": "私の存在の輝き方は「完璧な実力と輝きを持つ存在」。あなたはどのタイプ？ #存在が光る診断"}, "乙女座:乙女座": {"title": "誠実さが二重に重なる純粋な存在", "mk": "丁寧さと正確さ", "md": "細部と正確さで本当に役立つことを届ける才能の持ち主。丁寧な観察から生まれる言葉は、相手の本当の課題に届きます。実用性と誠実さが深い信頼を生み出します。", "ma": "丁寧に分析して具体的で実用的に伝える", "vk": "「揺るぎない信頼と重用」を引き寄せる力", "vd": "整理された清潔な環境、実務・サポート・細部への貢献の中で輝きます。清潔で機能的なミニマルな美と、緻密なデザイン感覚を持っています。目の前のことを丁寧に整え誠実にサポートすると、「あなたにしか頼めない」という指名が積み上がります。整えるほどに、実利を伴う安定した需要がやってくるギフトです。", "va": "目の前を丁寧に整え、誠実にサポートに徹する", "synthesis": "この二つが重なるとき、あなたは\n「誠実さが二重に重なる純粋な存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "丁寧に分析して具体的で実用的に伝えること"}, {"label": "在り方", "text": "目の前を丁寧に整え、誠実にサポートに徹すること"}], "share": "私の存在の輝き方は「誠実さが二重に重なる純粋な存在」。あなたはどのタイプ？ #存在が光る診断"}, "乙女座:天秤座": {"title": "正確さと美しさで世界を整える存在", "mk": "丁寧さと正確さ", "md": "細部と正確さで本当に役立つことを届ける才能の持ち主。丁寧な観察から生まれる言葉は、相手の本当の課題に届きます。実用性と誠実さが深い信頼を生み出します。", "ma": "丁寧に分析して具体的で実用的に伝える", "vk": "「人生を格上げする良縁」を引き寄せる力", "vd": "洗練された人間関係、交渉やデザイン・美に関わる場で輝きます。優雅で調和のとれたシンメトリーと万人受けする美意識を持っています。自分の美意識を磨き調和を保っているだけで、自分をより素敵な場所へ連れて行ってくれる人が現れます。あなたがエレガントであるほど、最高のパートナーシップが引き寄せられるギフトです。", "va": "美意識を磨いて、自分の世界の調和と洗練を保つ", "synthesis": "この二つが重なるとき、あなたは\n「正確さと美しさで世界を整える存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "丁寧に分析して具体的で実用的に伝えること"}, {"label": "在り方", "text": "美意識を磨いて、自分の世界の調和と洗練を保つこと"}], "share": "私の存在の輝き方は「正確さと美しさで世界を整える存在」。あなたはどのタイプ？ #存在が光る診断"}, "乙女座:蠍座": {"title": "深い洞察と誠実さで変容を支える存在", "mk": "丁寧さと正確さ", "md": "細部と正確さで本当に役立つことを届ける才能の持ち主。丁寧な観察から生まれる言葉は、相手の本当の課題に届きます。実用性と誠実さが深い信頼を生み出します。", "ma": "丁寧に分析して具体的で実用的に伝える", "vk": "「深い忠誠と受け継がれる遺産」を引き寄せる力", "vd": "一つのことに没頭できる環境、深い探求・秘密保持・変容の中で輝きます。深遠で神秘的、重厚な色彩とセクシーさ、核心を突く表現の美意識があります。本質を深く追求するほど、秘密の知恵や大きな権限、遺産のような重厚な富を託されます。深めるほどに、濃密な力と深い忠誠が集まるギフトです。", "va": "一つのことに深く潜り続け、本質の探求を手放さない", "synthesis": "この二つが重なるとき、あなたは\n「深い洞察と誠実さで変容を支える存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "丁寧に分析して具体的で実用的に伝えること"}, {"label": "在り方", "text": "一つのことに深く潜り続け、本質の探求を手放さないこと"}], "share": "私の存在の輝き方は「深い洞察と誠実さで変容を支える存在」。あなたはどのタイプ？ #存在が光る診断"}, "乙女座:射手座": {"title": "実用的な知恵で広い世界に届ける存在", "mk": "丁寧さと正確さ", "md": "細部と正確さで本当に役立つことを届ける才能の持ち主。丁寧な観察から生まれる言葉は、相手の本当の課題に届きます。実用性と誠実さが深い信頼を生み出します。", "ma": "丁寧に分析して具体的で実用的に伝える", "vk": "「世界を広げる自由の切符」を引き寄せる力", "vd": "自由度が高く遠出できる環境、教育・哲学・海外関連の中で輝きます。開放的でダイナミック、異国情緒とラフなスタイルの自由な美意識があります。高い理想を掲げて学んでいると、海外との縁や未知の体験ができる招待状が届きます。遠くを見つめるほど、精神的・物理的な移動の自由が手に入るギフトです。", "va": "高い理想を掲げ学び続け、遠くに目を向けて行動する", "synthesis": "この二つが重なるとき、あなたは\n「実用的な知恵で広い世界に届ける存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "丁寧に分析して具体的で実用的に伝えること"}, {"label": "在り方", "text": "高い理想を掲げ学び続け、遠くに目を向けて行動すること"}], "share": "私の存在の輝き方は「実用的な知恵で広い世界に届ける存在」。あなたはどのタイプ？ #存在が光る診断"}, "乙女座:山羊座": {"title": "卓越した実力で信頼を積み上げる存在", "mk": "丁寧さと正確さ", "md": "細部と正確さで本当に役立つことを届ける才能の持ち主。丁寧な観察から生まれる言葉は、相手の本当の課題に届きます。実用性と誠実さが深い信頼を生み出します。", "ma": "丁寧に分析して具体的で実用的に伝える", "vk": "「社会的地位と堅実な豊かさ」を引き寄せる力", "vd": "秩序があり成果が目に見える環境、経営・構築・野心の中で輝きます。クラシックで正統派、格式高い機能美と時間の重みある美意識を持っています。目的を持ってコツコツと形を作っていると、確固たる社会的地位と長期的な不労所得が残ります。誠実に「形」にするほど、社会的な敬意と報酬が定着していくギフトです。", "va": "目的を持ってコツコツと形を作り続ける", "synthesis": "この二つが重なるとき、あなたは\n「卓越した実力で信頼を積み上げる存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "丁寧に分析して具体的で実用的に伝えること"}, {"label": "在り方", "text": "目的を持ってコツコツと形を作り続けること"}], "share": "私の存在の輝き方は「卓越した実力で信頼を積み上げる存在」。あなたはどのタイプ？ #存在が光る診断"}, "乙女座:水瓶座": {"title": "精緻な革新で世界を変える存在", "mk": "丁寧さと正確さ", "md": "細部と正確さで本当に役立つことを届ける才能の持ち主。丁寧な観察から生まれる言葉は、相手の本当の課題に届きます。実用性と誠実さが深い信頼を生み出します。", "ma": "丁寧に分析して具体的で実用的に伝える", "vk": "「境界のない自由とつながり」を引き寄せる力", "vd": "自由でフラットな環境、テクノロジー・システム構築・変革の中で輝きます。先端でユニーク、近未来的な常識を覆すデザインの美意識を持っています。常識に囚われずフラットに考えているだけで、グローバルな人脈と革新的なアイデアが広がります。自由でいるほど、面白い未来が向こうからやってくるギフトです。", "va": "常識に囚われず自由にフラットに、革新的に考え行動する", "synthesis": "この二つが重なるとき、あなたは\n「精緻な革新で世界を変える存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "丁寧に分析して具体的で実用的に伝えること"}, {"label": "在り方", "text": "常識に囚われず自由にフラットに、革新的に考え行動すること"}], "share": "私の存在の輝き方は「精緻な革新で世界を変える存在」。あなたはどのタイプ？ #存在が光る診断"}, "乙女座:魚座": {"title": "現実と夢の間で人を救う存在", "mk": "丁寧さと正確さ", "md": "細部と正確さで本当に役立つことを届ける才能の持ち主。丁寧な観察から生まれる言葉は、相手の本当の課題に届きます。実用性と誠実さが深い信頼を生み出します。", "ma": "丁寧に分析して具体的で実用的に伝える", "vk": "「魂を揺さぶるインスピレーション」を引き寄せる力", "vd": "境界線のない曖昧な環境、芸術・ヒーリング・スピリチュアルの中で輝きます。幻想的で情緒的、透き通る色と境界を溶かすアートの美意識を持っています。目に見えないものを信じて委ねていると、奇跡的なタイミングと魂を揺さぶる感動が溢れます。委ねるほどに、天の助け（シンクロニシティ）が頻発するギフトです。", "va": "目に見えないものを信じ、感覚と霊感に委ねて動く", "synthesis": "この二つが重なるとき、あなたは\n「現実と夢の間で人を救う存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "丁寧に分析して具体的で実用的に伝えること"}, {"label": "在り方", "text": "目に見えないものを信じ、感覚と霊感に委ねて動くこと"}], "share": "私の存在の輝き方は「現実と夢の間で人を救う存在」。あなたはどのタイプ？ #存在が光る診断"}, "天秤座:牡羊座": {"title": "美意識と情熱で世界を動かす存在", "mk": "バランスと美しさ", "md": "バランスと美しさで調和を生む言葉を持つ人。誰もが納得できる言葉を選びながら、美的センスで表現に磨きをかけます。対話の中で真実を引き出す才能があります。", "ma": "美しく調和のとれた言葉を選んで伝える", "vk": "「はじまりの切符」を引き寄せる力", "vd": "自分が「一番乗り」できる環境、即断即決・短期集中の働き方があなたを輝かせます。直感的でエネルギッシュ、原色のような潔い美的センスを持っています。あなたが直感に従って動くとき、新しいチャンスやリーダーの椅子が自然と転がり込みます。頑張らなくても、なぜか「一番最初にたどり着く人」になるのがあなたのギフトです。", "va": "直感に従ってすぐ動く。一番乗りできる環境に身を置く", "synthesis": "この二つが重なるとき、あなたは\n「美意識と情熱で世界を動かす存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "美しく調和のとれた言葉を選んで伝えること"}, {"label": "在り方", "text": "直感に従ってすぐ動く。一番乗りできる環境に身を置くこと"}], "share": "私の存在の輝き方は「美意識と情熱で世界を動かす存在」。あなたはどのタイプ？ #存在が光る診断"}, "天秤座:牡牛座": {"title": "調和と豊かさで人を満たす存在", "mk": "バランスと美しさ", "md": "バランスと美しさで調和を生む言葉を持つ人。誰もが納得できる言葉を選びながら、美的センスで表現に磨きをかけます。対話の中で真実を引き出す才能があります。", "ma": "美しく調和のとれた言葉を選んで伝える", "vk": "「物質的豊かさ」を引き寄せる力", "vd": "五感が満たされる環境、マイペースで安定したルーティンの中でこそ輝きます。本物志向の美的センスで、上質な素材感・伝統美・心地よさを見抜く目があります。心地よさを妥協せずに選んでいると、物質的な豊かさと確実な資産が向こうからやってきます。五感を満たすほどに、豊かさが物質化していくギフトです。", "va": "五感の心地よさを妥協せずに選び続ける", "synthesis": "この二つが重なるとき、あなたは\n「調和と豊かさで人を満たす存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "美しく調和のとれた言葉を選んで伝えること"}, {"label": "在り方", "text": "五感の心地よさを妥協せずに選び続けること"}], "share": "私の存在の輝き方は「調和と豊かさで人を満たす存在」。あなたはどのタイプ？ #存在が光る診断"}, "天秤座:双子座": {"title": "言葉と知性が美しく舞う存在", "mk": "バランスと美しさ", "md": "バランスと美しさで調和を生む言葉を持つ人。誰もが納得できる言葉を選びながら、美的センスで表現に磨きをかけます。対話の中で真実を引き出す才能があります。", "ma": "美しく調和のとれた言葉を選んで伝える", "vk": "「旬の情報とチャンス」を引き寄せる力", "vd": "変化に富んだ環境、複業やパラレルな役割の中で輝きます。軽やかでトレンド感があり、言葉のセンスと遊び心ある美意識の持ち主です。好奇心のままに軽やかに動くだけで、今最も知りたい情報と面白い人脈が勝手に集まります。あなたがメディアになるほど、旬なチャンスが次々と舞い込むギフトです。", "va": "好奇心のままに軽やかに動いて情報を媒介する", "synthesis": "この二つが重なるとき、あなたは\n「言葉と知性が美しく舞う存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "美しく調和のとれた言葉を選んで伝えること"}, {"label": "在り方", "text": "好奇心のままに軽やかに動いて情報を媒介すること"}], "share": "私の存在の輝き方は「言葉と知性が美しく舞う存在」。あなたはどのタイプ？ #存在が光る診断"}, "天秤座:蟹座": {"title": "調和と温かさで人を包む存在", "mk": "バランスと美しさ", "md": "バランスと美しさで調和を生む言葉を持つ人。誰もが納得できる言葉を選びながら、美的センスで表現に磨きをかけます。対話の中で真実を引き出す才能があります。", "ma": "美しく調和のとれた言葉を選んで伝える", "vk": "「絶対的な味方と居場所」を引き寄せる力", "vd": "家族のような信頼関係、在宅や温かいチーム作りの中で輝きます。懐かしく情緒的な、居心地の良い空間と手作り感の美意識を持っています。身近な人を慈しみ自分の感情を大切にしていると、困ったときに必ず助けてくれる仲間が整います。愛を与えるほど、守られる側にも回れるギフトです。", "va": "身近な人への温かさを大切にし、感情を丁寧に扱う", "synthesis": "この二つが重なるとき、あなたは\n「調和と温かさで人を包む存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "美しく調和のとれた言葉を選んで伝えること"}, {"label": "在り方", "text": "身近な人への温かさを大切にし、感情を丁寧に扱うこと"}], "share": "私の存在の輝き方は「調和と温かさで人を包む存在」。あなたはどのタイプ？ #存在が光る診断"}, "天秤座:獅子座": {"title": "美と輝きが共鳴する圧倒的な存在", "mk": "バランスと美しさ", "md": "バランスと美しさで調和を生む言葉を持つ人。誰もが納得できる言葉を選びながら、美的センスで表現に磨きをかけます。対話の中で真実を引き出す才能があります。", "ma": "美しく調和のとれた言葉を選んで伝える", "vk": "「賞賛とスポットライト」を引き寄せる力", "vd": "自己表現ができる華やかな場、称賛される立場の中で輝きます。ドラマチックで豪華、主役級の存在感とゴールドの輝きを放つ美意識があります。心から楽しみ堂々と表現しているだけで、憧れの視線と特別な待遇が引き寄せられます。あなたが輝けば輝くほど、世界があなたを主役として遇してくれるギフトです。", "va": "自分が心から楽しめることを最優先にして堂々と表現する", "synthesis": "この二つが重なるとき、あなたは\n「美と輝きが共鳴する圧倒的な存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "美しく調和のとれた言葉を選んで伝えること"}, {"label": "在り方", "text": "自分が心から楽しめることを最優先にして堂々と表現すること"}], "share": "私の存在の輝き方は「美と輝きが共鳴する圧倒的な存在」。あなたはどのタイプ？ #存在が光る診断"}, "天秤座:乙女座": {"title": "美しさと誠実さで人を導く存在", "mk": "バランスと美しさ", "md": "バランスと美しさで調和を生む言葉を持つ人。誰もが納得できる言葉を選びながら、美的センスで表現に磨きをかけます。対話の中で真実を引き出す才能があります。", "ma": "美しく調和のとれた言葉を選んで伝える", "vk": "「揺るぎない信頼と重用」を引き寄せる力", "vd": "整理された清潔な環境、実務・サポート・細部への貢献の中で輝きます。清潔で機能的なミニマルな美と、緻密なデザイン感覚を持っています。目の前のことを丁寧に整え誠実にサポートすると、「あなたにしか頼めない」という指名が積み上がります。整えるほどに、実利を伴う安定した需要がやってくるギフトです。", "va": "目の前を丁寧に整え、誠実にサポートに徹する", "synthesis": "この二つが重なるとき、あなたは\n「美しさと誠実さで人を導く存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "美しく調和のとれた言葉を選んで伝えること"}, {"label": "在り方", "text": "目の前を丁寧に整え、誠実にサポートに徹すること"}], "share": "私の存在の輝き方は「美しさと誠実さで人を導く存在」。あなたはどのタイプ？ #存在が光る診断"}, "天秤座:天秤座": {"title": "完璧な調和と美意識を体現する存在", "mk": "バランスと美しさ", "md": "バランスと美しさで調和を生む言葉を持つ人。誰もが納得できる言葉を選びながら、美的センスで表現に磨きをかけます。対話の中で真実を引き出す才能があります。", "ma": "美しく調和のとれた言葉を選んで伝える", "vk": "「人生を格上げする良縁」を引き寄せる力", "vd": "洗練された人間関係、交渉やデザイン・美に関わる場で輝きます。優雅で調和のとれたシンメトリーと万人受けする美意識を持っています。自分の美意識を磨き調和を保っているだけで、自分をより素敵な場所へ連れて行ってくれる人が現れます。あなたがエレガントであるほど、最高のパートナーシップが引き寄せられるギフトです。", "va": "美意識を磨いて、自分の世界の調和と洗練を保つ", "synthesis": "この二つが重なるとき、あなたは\n「完璧な調和と美意識を体現する存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "美しく調和のとれた言葉を選んで伝えること"}, {"label": "在り方", "text": "美意識を磨いて、自分の世界の調和と洗練を保つこと"}], "share": "私の存在の輝き方は「完璧な調和と美意識を体現する存在」。あなたはどのタイプ？ #存在が光る診断"}, "天秤座:蠍座": {"title": "美の裏に深みを持つ謎めいた存在", "mk": "バランスと美しさ", "md": "バランスと美しさで調和を生む言葉を持つ人。誰もが納得できる言葉を選びながら、美的センスで表現に磨きをかけます。対話の中で真実を引き出す才能があります。", "ma": "美しく調和のとれた言葉を選んで伝える", "vk": "「深い忠誠と受け継がれる遺産」を引き寄せる力", "vd": "一つのことに没頭できる環境、深い探求・秘密保持・変容の中で輝きます。深遠で神秘的、重厚な色彩とセクシーさ、核心を突く表現の美意識があります。本質を深く追求するほど、秘密の知恵や大きな権限、遺産のような重厚な富を託されます。深めるほどに、濃密な力と深い忠誠が集まるギフトです。", "va": "一つのことに深く潜り続け、本質の探求を手放さない", "synthesis": "この二つが重なるとき、あなたは\n「美の裏に深みを持つ謎めいた存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "美しく調和のとれた言葉を選んで伝えること"}, {"label": "在り方", "text": "一つのことに深く潜り続け、本質の探求を手放さないこと"}], "share": "私の存在の輝き方は「美の裏に深みを持つ謎めいた存在」。あなたはどのタイプ？ #存在が光る診断"}, "天秤座:射手座": {"title": "美意識と自由な哲学を持つ存在", "mk": "バランスと美しさ", "md": "バランスと美しさで調和を生む言葉を持つ人。誰もが納得できる言葉を選びながら、美的センスで表現に磨きをかけます。対話の中で真実を引き出す才能があります。", "ma": "美しく調和のとれた言葉を選んで伝える", "vk": "「世界を広げる自由の切符」を引き寄せる力", "vd": "自由度が高く遠出できる環境、教育・哲学・海外関連の中で輝きます。開放的でダイナミック、異国情緒とラフなスタイルの自由な美意識があります。高い理想を掲げて学んでいると、海外との縁や未知の体験ができる招待状が届きます。遠くを見つめるほど、精神的・物理的な移動の自由が手に入るギフトです。", "va": "高い理想を掲げ学び続け、遠くに目を向けて行動する", "synthesis": "この二つが重なるとき、あなたは\n「美意識と自由な哲学を持つ存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "美しく調和のとれた言葉を選んで伝えること"}, {"label": "在り方", "text": "高い理想を掲げ学び続け、遠くに目を向けて行動すること"}], "share": "私の存在の輝き方は「美意識と自由な哲学を持つ存在」。あなたはどのタイプ？ #存在が光る診断"}, "天秤座:山羊座": {"title": "洗練と品格で人の理想になる存在", "mk": "バランスと美しさ", "md": "バランスと美しさで調和を生む言葉を持つ人。誰もが納得できる言葉を選びながら、美的センスで表現に磨きをかけます。対話の中で真実を引き出す才能があります。", "ma": "美しく調和のとれた言葉を選んで伝える", "vk": "「社会的地位と堅実な豊かさ」を引き寄せる力", "vd": "秩序があり成果が目に見える環境、経営・構築・野心の中で輝きます。クラシックで正統派、格式高い機能美と時間の重みある美意識を持っています。目的を持ってコツコツと形を作っていると、確固たる社会的地位と長期的な不労所得が残ります。誠実に「形」にするほど、社会的な敬意と報酬が定着していくギフトです。", "va": "目的を持ってコツコツと形を作り続ける", "synthesis": "この二つが重なるとき、あなたは\n「洗練と品格で人の理想になる存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "美しく調和のとれた言葉を選んで伝えること"}, {"label": "在り方", "text": "目的を持ってコツコツと形を作り続けること"}], "share": "私の存在の輝き方は「洗練と品格で人の理想になる存在」。あなたはどのタイプ？ #存在が光る診断"}, "天秤座:水瓶座": {"title": "美と革新で時代をリードする存在", "mk": "バランスと美しさ", "md": "バランスと美しさで調和を生む言葉を持つ人。誰もが納得できる言葉を選びながら、美的センスで表現に磨きをかけます。対話の中で真実を引き出す才能があります。", "ma": "美しく調和のとれた言葉を選んで伝える", "vk": "「境界のない自由とつながり」を引き寄せる力", "vd": "自由でフラットな環境、テクノロジー・システム構築・変革の中で輝きます。先端でユニーク、近未来的な常識を覆すデザインの美意識を持っています。常識に囚われずフラットに考えているだけで、グローバルな人脈と革新的なアイデアが広がります。自由でいるほど、面白い未来が向こうからやってくるギフトです。", "va": "常識に囚われず自由にフラットに、革新的に考え行動する", "synthesis": "この二つが重なるとき、あなたは\n「美と革新で時代をリードする存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "美しく調和のとれた言葉を選んで伝えること"}, {"label": "在り方", "text": "常識に囚われず自由にフラットに、革新的に考え行動すること"}], "share": "私の存在の輝き方は「美と革新で時代をリードする存在」。あなたはどのタイプ？ #存在が光る診断"}, "天秤座:魚座": {"title": "調和と愛が溶け合う存在", "mk": "バランスと美しさ", "md": "バランスと美しさで調和を生む言葉を持つ人。誰もが納得できる言葉を選びながら、美的センスで表現に磨きをかけます。対話の中で真実を引き出す才能があります。", "ma": "美しく調和のとれた言葉を選んで伝える", "vk": "「魂を揺さぶるインスピレーション」を引き寄せる力", "vd": "境界線のない曖昧な環境、芸術・ヒーリング・スピリチュアルの中で輝きます。幻想的で情緒的、透き通る色と境界を溶かすアートの美意識を持っています。目に見えないものを信じて委ねていると、奇跡的なタイミングと魂を揺さぶる感動が溢れます。委ねるほどに、天の助け（シンクロニシティ）が頻発するギフトです。", "va": "目に見えないものを信じ、感覚と霊感に委ねて動く", "synthesis": "この二つが重なるとき、あなたは\n「調和と愛が溶け合う存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "美しく調和のとれた言葉を選んで伝えること"}, {"label": "在り方", "text": "目に見えないものを信じ、感覚と霊感に委ねて動くこと"}], "share": "私の存在の輝き方は「調和と愛が溶け合う存在」。あなたはどのタイプ？ #存在が光る診断"}, "蠍座:牡羊座": {"title": "情熱と洞察で本質を突く存在", "mk": "本質と深み", "md": "本質と深みで変容をもたらす言葉の持ち主。表面ではなく核心に触れる伝え方で、相手の中に静かな革命を起こします。沈黙さえも語るほどの力強い深みがあります。", "ma": "表面ではなく本質に触れる深い言葉を選ぶ", "vk": "「はじまりの切符」を引き寄せる力", "vd": "自分が「一番乗り」できる環境、即断即決・短期集中の働き方があなたを輝かせます。直感的でエネルギッシュ、原色のような潔い美的センスを持っています。あなたが直感に従って動くとき、新しいチャンスやリーダーの椅子が自然と転がり込みます。頑張らなくても、なぜか「一番最初にたどり着く人」になるのがあなたのギフトです。", "va": "直感に従ってすぐ動く。一番乗りできる環境に身を置く", "synthesis": "この二つが重なるとき、あなたは\n「情熱と洞察で本質を突く存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "表面ではなく本質に触れる深い言葉を選ぶこと"}, {"label": "在り方", "text": "直感に従ってすぐ動く。一番乗りできる環境に身を置くこと"}], "share": "私の存在の輝き方は「情熱と洞察で本質を突く存在」。あなたはどのタイプ？ #存在が光る診断"}, "蠍座:牡牛座": {"title": "深みと安定感で揺るぎない存在", "mk": "本質と深み", "md": "本質と深みで変容をもたらす言葉の持ち主。表面ではなく核心に触れる伝え方で、相手の中に静かな革命を起こします。沈黙さえも語るほどの力強い深みがあります。", "ma": "表面ではなく本質に触れる深い言葉を選ぶ", "vk": "「物質的豊かさ」を引き寄せる力", "vd": "五感が満たされる環境、マイペースで安定したルーティンの中でこそ輝きます。本物志向の美的センスで、上質な素材感・伝統美・心地よさを見抜く目があります。心地よさを妥協せずに選んでいると、物質的な豊かさと確実な資産が向こうからやってきます。五感を満たすほどに、豊かさが物質化していくギフトです。", "va": "五感の心地よさを妥協せずに選び続ける", "synthesis": "この二つが重なるとき、あなたは\n「深みと安定感で揺るぎない存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "表面ではなく本質に触れる深い言葉を選ぶこと"}, {"label": "在り方", "text": "五感の心地よさを妥協せずに選び続けること"}], "share": "私の存在の輝き方は「深みと安定感で揺るぎない存在」。あなたはどのタイプ？ #存在が光る診断"}, "蠍座:双子座": {"title": "洞察と多様性で真実を解き明かす存在", "mk": "本質と深み", "md": "本質と深みで変容をもたらす言葉の持ち主。表面ではなく核心に触れる伝え方で、相手の中に静かな革命を起こします。沈黙さえも語るほどの力強い深みがあります。", "ma": "表面ではなく本質に触れる深い言葉を選ぶ", "vk": "「旬の情報とチャンス」を引き寄せる力", "vd": "変化に富んだ環境、複業やパラレルな役割の中で輝きます。軽やかでトレンド感があり、言葉のセンスと遊び心ある美意識の持ち主です。好奇心のままに軽やかに動くだけで、今最も知りたい情報と面白い人脈が勝手に集まります。あなたがメディアになるほど、旬なチャンスが次々と舞い込むギフトです。", "va": "好奇心のままに軽やかに動いて情報を媒介する", "synthesis": "この二つが重なるとき、あなたは\n「洞察と多様性で真実を解き明かす存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "表面ではなく本質に触れる深い言葉を選ぶこと"}, {"label": "在り方", "text": "好奇心のままに軽やかに動いて情報を媒介すること"}], "share": "私の存在の輝き方は「洞察と多様性で真実を解き明かす存在」。あなたはどのタイプ？ #存在が光る診断"}, "蠍座:蟹座": {"title": "魂の深淵から人を癒す存在", "mk": "本質と深み", "md": "本質と深みで変容をもたらす言葉の持ち主。表面ではなく核心に触れる伝え方で、相手の中に静かな革命を起こします。沈黙さえも語るほどの力強い深みがあります。", "ma": "表面ではなく本質に触れる深い言葉を選ぶ", "vk": "「絶対的な味方と居場所」を引き寄せる力", "vd": "家族のような信頼関係、在宅や温かいチーム作りの中で輝きます。懐かしく情緒的な、居心地の良い空間と手作り感の美意識を持っています。身近な人を慈しみ自分の感情を大切にしていると、困ったときに必ず助けてくれる仲間が整います。愛を与えるほど、守られる側にも回れるギフトです。", "va": "身近な人への温かさを大切にし、感情を丁寧に扱う", "synthesis": "この二つが重なるとき、あなたは\n「魂の深淵から人を癒す存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "表面ではなく本質に触れる深い言葉を選ぶこと"}, {"label": "在り方", "text": "身近な人への温かさを大切にし、感情を丁寧に扱うこと"}], "share": "私の存在の輝き方は「魂の深淵から人を癒す存在」。あなたはどのタイプ？ #存在が光る診断"}, "蠍座:獅子座": {"title": "深みと輝きが共鳴する魂の炎", "mk": "本質と深み", "md": "本質と深みで変容をもたらす言葉の持ち主。表面ではなく核心に触れる伝え方で、相手の中に静かな革命を起こします。沈黙さえも語るほどの力強い深みがあります。", "ma": "表面ではなく本質に触れる深い言葉を選ぶ", "vk": "「賞賛とスポットライト」を引き寄せる力", "vd": "自己表現ができる華やかな場、称賛される立場の中で輝きます。ドラマチックで豪華、主役級の存在感とゴールドの輝きを放つ美意識があります。心から楽しみ堂々と表現しているだけで、憧れの視線と特別な待遇が引き寄せられます。あなたが輝けば輝くほど、世界があなたを主役として遇してくれるギフトです。", "va": "自分が心から楽しめることを最優先にして堂々と表現する", "synthesis": "この二つが重なるとき、あなたは\n「深みと輝きが共鳴する魂の炎」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "表面ではなく本質に触れる深い言葉を選ぶこと"}, {"label": "在り方", "text": "自分が心から楽しめることを最優先にして堂々と表現すること"}], "share": "私の存在の輝き方は「深みと輝きが共鳴する魂の炎」。あなたはどのタイプ？ #存在が光る診断"}, "蠍座:乙女座": {"title": "真実と誠実さで人を変容させる存在", "mk": "本質と深み", "md": "本質と深みで変容をもたらす言葉の持ち主。表面ではなく核心に触れる伝え方で、相手の中に静かな革命を起こします。沈黙さえも語るほどの力強い深みがあります。", "ma": "表面ではなく本質に触れる深い言葉を選ぶ", "vk": "「揺るぎない信頼と重用」を引き寄せる力", "vd": "整理された清潔な環境、実務・サポート・細部への貢献の中で輝きます。清潔で機能的なミニマルな美と、緻密なデザイン感覚を持っています。目の前のことを丁寧に整え誠実にサポートすると、「あなたにしか頼めない」という指名が積み上がります。整えるほどに、実利を伴う安定した需要がやってくるギフトです。", "va": "目の前を丁寧に整え、誠実にサポートに徹する", "synthesis": "この二つが重なるとき、あなたは\n「真実と誠実さで人を変容させる存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "表面ではなく本質に触れる深い言葉を選ぶこと"}, {"label": "在り方", "text": "目の前を丁寧に整え、誠実にサポートに徹すること"}], "share": "私の存在の輝き方は「真実と誠実さで人を変容させる存在」。あなたはどのタイプ？ #存在が光る診断"}, "蠍座:天秤座": {"title": "深みと美しさを兼ね備えた謎の存在", "mk": "本質と深み", "md": "本質と深みで変容をもたらす言葉の持ち主。表面ではなく核心に触れる伝え方で、相手の中に静かな革命を起こします。沈黙さえも語るほどの力強い深みがあります。", "ma": "表面ではなく本質に触れる深い言葉を選ぶ", "vk": "「人生を格上げする良縁」を引き寄せる力", "vd": "洗練された人間関係、交渉やデザイン・美に関わる場で輝きます。優雅で調和のとれたシンメトリーと万人受けする美意識を持っています。自分の美意識を磨き調和を保っているだけで、自分をより素敵な場所へ連れて行ってくれる人が現れます。あなたがエレガントであるほど、最高のパートナーシップが引き寄せられるギフトです。", "va": "美意識を磨いて、自分の世界の調和と洗練を保つ", "synthesis": "この二つが重なるとき、あなたは\n「深みと美しさを兼ね備えた謎の存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "表面ではなく本質に触れる深い言葉を選ぶこと"}, {"label": "在り方", "text": "美意識を磨いて、自分の世界の調和と洗練を保つこと"}], "share": "私の存在の輝き方は「深みと美しさを兼ね備えた謎の存在」。あなたはどのタイプ？ #存在が光る診断"}, "蠍座:蠍座": {"title": "圧倒的な深みで人を変容させる存在", "mk": "本質と深み", "md": "本質と深みで変容をもたらす言葉の持ち主。表面ではなく核心に触れる伝え方で、相手の中に静かな革命を起こします。沈黙さえも語るほどの力強い深みがあります。", "ma": "表面ではなく本質に触れる深い言葉を選ぶ", "vk": "「深い忠誠と受け継がれる遺産」を引き寄せる力", "vd": "一つのことに没頭できる環境、深い探求・秘密保持・変容の中で輝きます。深遠で神秘的、重厚な色彩とセクシーさ、核心を突く表現の美意識があります。本質を深く追求するほど、秘密の知恵や大きな権限、遺産のような重厚な富を託されます。深めるほどに、濃密な力と深い忠誠が集まるギフトです。", "va": "一つのことに深く潜り続け、本質の探求を手放さない", "synthesis": "この二つが重なるとき、あなたは\n「圧倒的な深みで人を変容させる存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "表面ではなく本質に触れる深い言葉を選ぶこと"}, {"label": "在り方", "text": "一つのことに深く潜り続け、本質の探求を手放さないこと"}], "share": "私の存在の輝き方は「圧倒的な深みで人を変容させる存在」。あなたはどのタイプ？ #存在が光る診断"}, "蠍座:射手座": {"title": "本質的な洞察と自由な精神を持つ存在", "mk": "本質と深み", "md": "本質と深みで変容をもたらす言葉の持ち主。表面ではなく核心に触れる伝え方で、相手の中に静かな革命を起こします。沈黙さえも語るほどの力強い深みがあります。", "ma": "表面ではなく本質に触れる深い言葉を選ぶ", "vk": "「世界を広げる自由の切符」を引き寄せる力", "vd": "自由度が高く遠出できる環境、教育・哲学・海外関連の中で輝きます。開放的でダイナミック、異国情緒とラフなスタイルの自由な美意識があります。高い理想を掲げて学んでいると、海外との縁や未知の体験ができる招待状が届きます。遠くを見つめるほど、精神的・物理的な移動の自由が手に入るギフトです。", "va": "高い理想を掲げ学び続け、遠くに目を向けて行動する", "synthesis": "この二つが重なるとき、あなたは\n「本質的な洞察と自由な精神を持つ存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "表面ではなく本質に触れる深い言葉を選ぶこと"}, {"label": "在り方", "text": "高い理想を掲げ学び続け、遠くに目を向けて行動すること"}], "share": "私の存在の輝き方は「本質的な洞察と自由な精神を持つ存在」。あなたはどのタイプ？ #存在が光る診断"}, "蠍座:山羊座": {"title": "洞察と品格で時代を超える存在", "mk": "本質と深み", "md": "本質と深みで変容をもたらす言葉の持ち主。表面ではなく核心に触れる伝え方で、相手の中に静かな革命を起こします。沈黙さえも語るほどの力強い深みがあります。", "ma": "表面ではなく本質に触れる深い言葉を選ぶ", "vk": "「社会的地位と堅実な豊かさ」を引き寄せる力", "vd": "秩序があり成果が目に見える環境、経営・構築・野心の中で輝きます。クラシックで正統派、格式高い機能美と時間の重みある美意識を持っています。目的を持ってコツコツと形を作っていると、確固たる社会的地位と長期的な不労所得が残ります。誠実に「形」にするほど、社会的な敬意と報酬が定着していくギフトです。", "va": "目的を持ってコツコツと形を作り続ける", "synthesis": "この二つが重なるとき、あなたは\n「洞察と品格で時代を超える存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "表面ではなく本質に触れる深い言葉を選ぶこと"}, {"label": "在り方", "text": "目的を持ってコツコツと形を作り続けること"}], "share": "私の存在の輝き方は「洞察と品格で時代を超える存在」。あなたはどのタイプ？ #存在が光る診断"}, "蠍座:水瓶座": {"title": "深みと革新で世界を変革する存在", "mk": "本質と深み", "md": "本質と深みで変容をもたらす言葉の持ち主。表面ではなく核心に触れる伝え方で、相手の中に静かな革命を起こします。沈黙さえも語るほどの力強い深みがあります。", "ma": "表面ではなく本質に触れる深い言葉を選ぶ", "vk": "「境界のない自由とつながり」を引き寄せる力", "vd": "自由でフラットな環境、テクノロジー・システム構築・変革の中で輝きます。先端でユニーク、近未来的な常識を覆すデザインの美意識を持っています。常識に囚われずフラットに考えているだけで、グローバルな人脈と革新的なアイデアが広がります。自由でいるほど、面白い未来が向こうからやってくるギフトです。", "va": "常識に囚われず自由にフラットに、革新的に考え行動する", "synthesis": "この二つが重なるとき、あなたは\n「深みと革新で世界を変革する存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "表面ではなく本質に触れる深い言葉を選ぶこと"}, {"label": "在り方", "text": "常識に囚われず自由にフラットに、革新的に考え行動すること"}], "share": "私の存在の輝き方は「深みと革新で世界を変革する存在」。あなたはどのタイプ？ #存在が光る診断"}, "蠍座:魚座": {"title": "見えない世界と繋がる神聖な存在", "mk": "本質と深み", "md": "本質と深みで変容をもたらす言葉の持ち主。表面ではなく核心に触れる伝え方で、相手の中に静かな革命を起こします。沈黙さえも語るほどの力強い深みがあります。", "ma": "表面ではなく本質に触れる深い言葉を選ぶ", "vk": "「魂を揺さぶるインスピレーション」を引き寄せる力", "vd": "境界線のない曖昧な環境、芸術・ヒーリング・スピリチュアルの中で輝きます。幻想的で情緒的、透き通る色と境界を溶かすアートの美意識を持っています。目に見えないものを信じて委ねていると、奇跡的なタイミングと魂を揺さぶる感動が溢れます。委ねるほどに、天の助け（シンクロニシティ）が頻発するギフトです。", "va": "目に見えないものを信じ、感覚と霊感に委ねて動く", "synthesis": "この二つが重なるとき、あなたは\n「見えない世界と繋がる神聖な存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "表面ではなく本質に触れる深い言葉を選ぶこと"}, {"label": "在り方", "text": "目に見えないものを信じ、感覚と霊感に委ねて動くこと"}], "share": "私の存在の輝き方は「見えない世界と繋がる神聖な存在」。あなたはどのタイプ？ #存在が光る診断"}, "射手座:牡羊座": {"title": "自由と情熱で地平を切り開く存在", "mk": "ビジョンと自由", "md": "ビジョンと自由で可能性を広げる言葉を持つ人。大きな視野と哲学的な洞察が、人の心の中に眠っていた可能性を目覚めさせます。希望と冒険の言葉があなたを輝かせます。", "ma": "大きなビジョンと可能性を語りかける", "vk": "「はじまりの切符」を引き寄せる力", "vd": "自分が「一番乗り」できる環境、即断即決・短期集中の働き方があなたを輝かせます。直感的でエネルギッシュ、原色のような潔い美的センスを持っています。あなたが直感に従って動くとき、新しいチャンスやリーダーの椅子が自然と転がり込みます。頑張らなくても、なぜか「一番最初にたどり着く人」になるのがあなたのギフトです。", "va": "直感に従ってすぐ動く。一番乗りできる環境に身を置く", "synthesis": "この二つが重なるとき、あなたは\n「自由と情熱で地平を切り開く存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "大きなビジョンと可能性を語りかけること"}, {"label": "在り方", "text": "直感に従ってすぐ動く。一番乗りできる環境に身を置くこと"}], "share": "私の存在の輝き方は「自由と情熱で地平を切り開く存在」。あなたはどのタイプ？ #存在が光る診断"}, "射手座:牡牛座": {"title": "ビジョンと安心感を届ける存在", "mk": "ビジョンと自由", "md": "ビジョンと自由で可能性を広げる言葉を持つ人。大きな視野と哲学的な洞察が、人の心の中に眠っていた可能性を目覚めさせます。希望と冒険の言葉があなたを輝かせます。", "ma": "大きなビジョンと可能性を語りかける", "vk": "「物質的豊かさ」を引き寄せる力", "vd": "五感が満たされる環境、マイペースで安定したルーティンの中でこそ輝きます。本物志向の美的センスで、上質な素材感・伝統美・心地よさを見抜く目があります。心地よさを妥協せずに選んでいると、物質的な豊かさと確実な資産が向こうからやってきます。五感を満たすほどに、豊かさが物質化していくギフトです。", "va": "五感の心地よさを妥協せずに選び続ける", "synthesis": "この二つが重なるとき、あなたは\n「ビジョンと安心感を届ける存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "大きなビジョンと可能性を語りかけること"}, {"label": "在り方", "text": "五感の心地よさを妥協せずに選び続けること"}], "share": "私の存在の輝き方は「ビジョンと安心感を届ける存在」。あなたはどのタイプ？ #存在が光る診断"}, "射手座:双子座": {"title": "哲学と好奇心で世界を旅する存在", "mk": "ビジョンと自由", "md": "ビジョンと自由で可能性を広げる言葉を持つ人。大きな視野と哲学的な洞察が、人の心の中に眠っていた可能性を目覚めさせます。希望と冒険の言葉があなたを輝かせます。", "ma": "大きなビジョンと可能性を語りかける", "vk": "「旬の情報とチャンス」を引き寄せる力", "vd": "変化に富んだ環境、複業やパラレルな役割の中で輝きます。軽やかでトレンド感があり、言葉のセンスと遊び心ある美意識の持ち主です。好奇心のままに軽やかに動くだけで、今最も知りたい情報と面白い人脈が勝手に集まります。あなたがメディアになるほど、旬なチャンスが次々と舞い込むギフトです。", "va": "好奇心のままに軽やかに動いて情報を媒介する", "synthesis": "この二つが重なるとき、あなたは\n「哲学と好奇心で世界を旅する存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "大きなビジョンと可能性を語りかけること"}, {"label": "在り方", "text": "好奇心のままに軽やかに動いて情報を媒介すること"}], "share": "私の存在の輝き方は「哲学と好奇心で世界を旅する存在」。あなたはどのタイプ？ #存在が光る診断"}, "射手座:蟹座": {"title": "広い愛と温かさで人を包む存在", "mk": "ビジョンと自由", "md": "ビジョンと自由で可能性を広げる言葉を持つ人。大きな視野と哲学的な洞察が、人の心の中に眠っていた可能性を目覚めさせます。希望と冒険の言葉があなたを輝かせます。", "ma": "大きなビジョンと可能性を語りかける", "vk": "「絶対的な味方と居場所」を引き寄せる力", "vd": "家族のような信頼関係、在宅や温かいチーム作りの中で輝きます。懐かしく情緒的な、居心地の良い空間と手作り感の美意識を持っています。身近な人を慈しみ自分の感情を大切にしていると、困ったときに必ず助けてくれる仲間が整います。愛を与えるほど、守られる側にも回れるギフトです。", "va": "身近な人への温かさを大切にし、感情を丁寧に扱う", "synthesis": "この二つが重なるとき、あなたは\n「広い愛と温かさで人を包む存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "大きなビジョンと可能性を語りかけること"}, {"label": "在り方", "text": "身近な人への温かさを大切にし、感情を丁寧に扱うこと"}], "share": "私の存在の輝き方は「広い愛と温かさで人を包む存在」。あなたはどのタイプ？ #存在が光る診断"}, "射手座:獅子座": {"title": "炎と自由で人の魂を解放する存在", "mk": "ビジョンと自由", "md": "ビジョンと自由で可能性を広げる言葉を持つ人。大きな視野と哲学的な洞察が、人の心の中に眠っていた可能性を目覚めさせます。希望と冒険の言葉があなたを輝かせます。", "ma": "大きなビジョンと可能性を語りかける", "vk": "「賞賛とスポットライト」を引き寄せる力", "vd": "自己表現ができる華やかな場、称賛される立場の中で輝きます。ドラマチックで豪華、主役級の存在感とゴールドの輝きを放つ美意識があります。心から楽しみ堂々と表現しているだけで、憧れの視線と特別な待遇が引き寄せられます。あなたが輝けば輝くほど、世界があなたを主役として遇してくれるギフトです。", "va": "自分が心から楽しめることを最優先にして堂々と表現する", "synthesis": "この二つが重なるとき、あなたは\n「炎と自由で人の魂を解放する存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "大きなビジョンと可能性を語りかけること"}, {"label": "在り方", "text": "自分が心から楽しめることを最優先にして堂々と表現すること"}], "share": "私の存在の輝き方は「炎と自由で人の魂を解放する存在」。あなたはどのタイプ？ #存在が光る診断"}, "射手座:乙女座": {"title": "ビジョンと誠実さで未来を切り開く存在", "mk": "ビジョンと自由", "md": "ビジョンと自由で可能性を広げる言葉を持つ人。大きな視野と哲学的な洞察が、人の心の中に眠っていた可能性を目覚めさせます。希望と冒険の言葉があなたを輝かせます。", "ma": "大きなビジョンと可能性を語りかける", "vk": "「揺るぎない信頼と重用」を引き寄せる力", "vd": "整理された清潔な環境、実務・サポート・細部への貢献の中で輝きます。清潔で機能的なミニマルな美と、緻密なデザイン感覚を持っています。目の前のことを丁寧に整え誠実にサポートすると、「あなたにしか頼めない」という指名が積み上がります。整えるほどに、実利を伴う安定した需要がやってくるギフトです。", "va": "目の前を丁寧に整え、誠実にサポートに徹する", "synthesis": "この二つが重なるとき、あなたは\n「ビジョンと誠実さで未来を切り開く存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "大きなビジョンと可能性を語りかけること"}, {"label": "在り方", "text": "目の前を丁寧に整え、誠実にサポートに徹すること"}], "share": "私の存在の輝き方は「ビジョンと誠実さで未来を切り開く存在」。あなたはどのタイプ？ #存在が光る診断"}, "射手座:天秤座": {"title": "自由な哲学と美意識を持つ存在", "mk": "ビジョンと自由", "md": "ビジョンと自由で可能性を広げる言葉を持つ人。大きな視野と哲学的な洞察が、人の心の中に眠っていた可能性を目覚めさせます。希望と冒険の言葉があなたを輝かせます。", "ma": "大きなビジョンと可能性を語りかける", "vk": "「人生を格上げする良縁」を引き寄せる力", "vd": "洗練された人間関係、交渉やデザイン・美に関わる場で輝きます。優雅で調和のとれたシンメトリーと万人受けする美意識を持っています。自分の美意識を磨き調和を保っているだけで、自分をより素敵な場所へ連れて行ってくれる人が現れます。あなたがエレガントであるほど、最高のパートナーシップが引き寄せられるギフトです。", "va": "美意識を磨いて、自分の世界の調和と洗練を保つ", "synthesis": "この二つが重なるとき、あなたは\n「自由な哲学と美意識を持つ存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "大きなビジョンと可能性を語りかけること"}, {"label": "在り方", "text": "美意識を磨いて、自分の世界の調和と洗練を保つこと"}], "share": "私の存在の輝き方は「自由な哲学と美意識を持つ存在」。あなたはどのタイプ？ #存在が光る診断"}, "射手座:蠍座": {"title": "真実の探求と深みを持つ存在", "mk": "ビジョンと自由", "md": "ビジョンと自由で可能性を広げる言葉を持つ人。大きな視野と哲学的な洞察が、人の心の中に眠っていた可能性を目覚めさせます。希望と冒険の言葉があなたを輝かせます。", "ma": "大きなビジョンと可能性を語りかける", "vk": "「深い忠誠と受け継がれる遺産」を引き寄せる力", "vd": "一つのことに没頭できる環境、深い探求・秘密保持・変容の中で輝きます。深遠で神秘的、重厚な色彩とセクシーさ、核心を突く表現の美意識があります。本質を深く追求するほど、秘密の知恵や大きな権限、遺産のような重厚な富を託されます。深めるほどに、濃密な力と深い忠誠が集まるギフトです。", "va": "一つのことに深く潜り続け、本質の探求を手放さない", "synthesis": "この二つが重なるとき、あなたは\n「真実の探求と深みを持つ存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "大きなビジョンと可能性を語りかけること"}, {"label": "在り方", "text": "一つのことに深く潜り続け、本質の探求を手放さないこと"}], "share": "私の存在の輝き方は「真実の探求と深みを持つ存在」。あなたはどのタイプ？ #存在が光る診断"}, "射手座:射手座": {"title": "無限の可能性で宇宙と繋がる存在", "mk": "ビジョンと自由", "md": "ビジョンと自由で可能性を広げる言葉を持つ人。大きな視野と哲学的な洞察が、人の心の中に眠っていた可能性を目覚めさせます。希望と冒険の言葉があなたを輝かせます。", "ma": "大きなビジョンと可能性を語りかける", "vk": "「世界を広げる自由の切符」を引き寄せる力", "vd": "自由度が高く遠出できる環境、教育・哲学・海外関連の中で輝きます。開放的でダイナミック、異国情緒とラフなスタイルの自由な美意識があります。高い理想を掲げて学んでいると、海外との縁や未知の体験ができる招待状が届きます。遠くを見つめるほど、精神的・物理的な移動の自由が手に入るギフトです。", "va": "高い理想を掲げ学び続け、遠くに目を向けて行動する", "synthesis": "この二つが重なるとき、あなたは\n「無限の可能性で宇宙と繋がる存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "大きなビジョンと可能性を語りかけること"}, {"label": "在り方", "text": "高い理想を掲げ学び続け、遠くに目を向けて行動すること"}], "share": "私の存在の輝き方は「無限の可能性で宇宙と繋がる存在」。あなたはどのタイプ？ #存在が光る診断"}, "射手座:山羊座": {"title": "自由と品格を兼ね備えた存在", "mk": "ビジョンと自由", "md": "ビジョンと自由で可能性を広げる言葉を持つ人。大きな視野と哲学的な洞察が、人の心の中に眠っていた可能性を目覚めさせます。希望と冒険の言葉があなたを輝かせます。", "ma": "大きなビジョンと可能性を語りかける", "vk": "「社会的地位と堅実な豊かさ」を引き寄せる力", "vd": "秩序があり成果が目に見える環境、経営・構築・野心の中で輝きます。クラシックで正統派、格式高い機能美と時間の重みある美意識を持っています。目的を持ってコツコツと形を作っていると、確固たる社会的地位と長期的な不労所得が残ります。誠実に「形」にするほど、社会的な敬意と報酬が定着していくギフトです。", "va": "目的を持ってコツコツと形を作り続ける", "synthesis": "この二つが重なるとき、あなたは\n「自由と品格を兼ね備えた存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "大きなビジョンと可能性を語りかけること"}, {"label": "在り方", "text": "目的を持ってコツコツと形を作り続けること"}], "share": "私の存在の輝き方は「自由と品格を兼ね備えた存在」。あなたはどのタイプ？ #存在が光る診断"}, "射手座:水瓶座": {"title": "時代を超えた革命を起こす存在", "mk": "ビジョンと自由", "md": "ビジョンと自由で可能性を広げる言葉を持つ人。大きな視野と哲学的な洞察が、人の心の中に眠っていた可能性を目覚めさせます。希望と冒険の言葉があなたを輝かせます。", "ma": "大きなビジョンと可能性を語りかける", "vk": "「境界のない自由とつながり」を引き寄せる力", "vd": "自由でフラットな環境、テクノロジー・システム構築・変革の中で輝きます。先端でユニーク、近未来的な常識を覆すデザインの美意識を持っています。常識に囚われずフラットに考えているだけで、グローバルな人脈と革新的なアイデアが広がります。自由でいるほど、面白い未来が向こうからやってくるギフトです。", "va": "常識に囚われず自由にフラットに、革新的に考え行動する", "synthesis": "この二つが重なるとき、あなたは\n「時代を超えた革命を起こす存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "大きなビジョンと可能性を語りかけること"}, {"label": "在り方", "text": "常識に囚われず自由にフラットに、革新的に考え行動すること"}], "share": "私の存在の輝き方は「時代を超えた革命を起こす存在」。あなたはどのタイプ？ #存在が光る診断"}, "射手座:魚座": {"title": "宇宙の愛と哲学を届ける存在", "mk": "ビジョンと自由", "md": "ビジョンと自由で可能性を広げる言葉を持つ人。大きな視野と哲学的な洞察が、人の心の中に眠っていた可能性を目覚めさせます。希望と冒険の言葉があなたを輝かせます。", "ma": "大きなビジョンと可能性を語りかける", "vk": "「魂を揺さぶるインスピレーション」を引き寄せる力", "vd": "境界線のない曖昧な環境、芸術・ヒーリング・スピリチュアルの中で輝きます。幻想的で情緒的、透き通る色と境界を溶かすアートの美意識を持っています。目に見えないものを信じて委ねていると、奇跡的なタイミングと魂を揺さぶる感動が溢れます。委ねるほどに、天の助け（シンクロニシティ）が頻発するギフトです。", "va": "目に見えないものを信じ、感覚と霊感に委ねて動く", "synthesis": "この二つが重なるとき、あなたは\n「宇宙の愛と哲学を届ける存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "大きなビジョンと可能性を語りかけること"}, {"label": "在り方", "text": "目に見えないものを信じ、感覚と霊感に委ねて動くこと"}], "share": "私の存在の輝き方は「宇宙の愛と哲学を届ける存在」。あなたはどのタイプ？ #存在が光る診断"}, "山羊座:牡羊座": {"title": "戦略と情熱で頂点を目指す存在", "mk": "実績と信頼", "md": "実績と信頼で確かな方向性を示す言葉の持ち主。戦略的かつ体系的な伝え方は、相手に「これで大丈夫」という確信を与えます。長期的な視点が言葉に重みをもたらします。", "ma": "実績と論理で確かな方向性を示す", "vk": "「はじまりの切符」を引き寄せる力", "vd": "自分が「一番乗り」できる環境、即断即決・短期集中の働き方があなたを輝かせます。直感的でエネルギッシュ、原色のような潔い美的センスを持っています。あなたが直感に従って動くとき、新しいチャンスやリーダーの椅子が自然と転がり込みます。頑張らなくても、なぜか「一番最初にたどり着く人」になるのがあなたのギフトです。", "va": "直感に従ってすぐ動く。一番乗りできる環境に身を置く", "synthesis": "この二つが重なるとき、あなたは\n「戦略と情熱で頂点を目指す存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実績と論理で確かな方向性を示すこと"}, {"label": "在り方", "text": "直感に従ってすぐ動く。一番乗りできる環境に身を置くこと"}], "share": "私の存在の輝き方は「戦略と情熱で頂点を目指す存在」。あなたはどのタイプ？ #存在が光る診断"}, "山羊座:牡牛座": {"title": "実力と豊かさで本物を証明する存在", "mk": "実績と信頼", "md": "実績と信頼で確かな方向性を示す言葉の持ち主。戦略的かつ体系的な伝え方は、相手に「これで大丈夫」という確信を与えます。長期的な視点が言葉に重みをもたらします。", "ma": "実績と論理で確かな方向性を示す", "vk": "「物質的豊かさ」を引き寄せる力", "vd": "五感が満たされる環境、マイペースで安定したルーティンの中でこそ輝きます。本物志向の美的センスで、上質な素材感・伝統美・心地よさを見抜く目があります。心地よさを妥協せずに選んでいると、物質的な豊かさと確実な資産が向こうからやってきます。五感を満たすほどに、豊かさが物質化していくギフトです。", "va": "五感の心地よさを妥協せずに選び続ける", "synthesis": "この二つが重なるとき、あなたは\n「実力と豊かさで本物を証明する存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実績と論理で確かな方向性を示すこと"}, {"label": "在り方", "text": "五感の心地よさを妥協せずに選び続けること"}], "share": "私の存在の輝き方は「実力と豊かさで本物を証明する存在」。あなたはどのタイプ？ #存在が光る診断"}, "山羊座:双子座": {"title": "戦略的知性と多彩な繋がりを持つ存在", "mk": "実績と信頼", "md": "実績と信頼で確かな方向性を示す言葉の持ち主。戦略的かつ体系的な伝え方は、相手に「これで大丈夫」という確信を与えます。長期的な視点が言葉に重みをもたらします。", "ma": "実績と論理で確かな方向性を示す", "vk": "「旬の情報とチャンス」を引き寄せる力", "vd": "変化に富んだ環境、複業やパラレルな役割の中で輝きます。軽やかでトレンド感があり、言葉のセンスと遊び心ある美意識の持ち主です。好奇心のままに軽やかに動くだけで、今最も知りたい情報と面白い人脈が勝手に集まります。あなたがメディアになるほど、旬なチャンスが次々と舞い込むギフトです。", "va": "好奇心のままに軽やかに動いて情報を媒介する", "synthesis": "この二つが重なるとき、あなたは\n「戦略的知性と多彩な繋がりを持つ存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実績と論理で確かな方向性を示すこと"}, {"label": "在り方", "text": "好奇心のままに軽やかに動いて情報を媒介すること"}], "share": "私の存在の輝き方は「戦略的知性と多彩な繋がりを持つ存在」。あなたはどのタイプ？ #存在が光る診断"}, "山羊座:蟹座": {"title": "確かな実力と深い温かさを持つ存在", "mk": "実績と信頼", "md": "実績と信頼で確かな方向性を示す言葉の持ち主。戦略的かつ体系的な伝え方は、相手に「これで大丈夫」という確信を与えます。長期的な視点が言葉に重みをもたらします。", "ma": "実績と論理で確かな方向性を示す", "vk": "「絶対的な味方と居場所」を引き寄せる力", "vd": "家族のような信頼関係、在宅や温かいチーム作りの中で輝きます。懐かしく情緒的な、居心地の良い空間と手作り感の美意識を持っています。身近な人を慈しみ自分の感情を大切にしていると、困ったときに必ず助けてくれる仲間が整います。愛を与えるほど、守られる側にも回れるギフトです。", "va": "身近な人への温かさを大切にし、感情を丁寧に扱う", "synthesis": "この二つが重なるとき、あなたは\n「確かな実力と深い温かさを持つ存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実績と論理で確かな方向性を示すこと"}, {"label": "在り方", "text": "身近な人への温かさを大切にし、感情を丁寧に扱うこと"}], "share": "私の存在の輝き方は「確かな実力と深い温かさを持つ存在」。あなたはどのタイプ？ #存在が光る診断"}, "山羊座:獅子座": {"title": "品格と輝きで人の理想を体現する存在", "mk": "実績と信頼", "md": "実績と信頼で確かな方向性を示す言葉の持ち主。戦略的かつ体系的な伝え方は、相手に「これで大丈夫」という確信を与えます。長期的な視点が言葉に重みをもたらします。", "ma": "実績と論理で確かな方向性を示す", "vk": "「賞賛とスポットライト」を引き寄せる力", "vd": "自己表現ができる華やかな場、称賛される立場の中で輝きます。ドラマチックで豪華、主役級の存在感とゴールドの輝きを放つ美意識があります。心から楽しみ堂々と表現しているだけで、憧れの視線と特別な待遇が引き寄せられます。あなたが輝けば輝くほど、世界があなたを主役として遇してくれるギフトです。", "va": "自分が心から楽しめることを最優先にして堂々と表現する", "synthesis": "この二つが重なるとき、あなたは\n「品格と輝きで人の理想を体現する存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実績と論理で確かな方向性を示すこと"}, {"label": "在り方", "text": "自分が心から楽しめることを最優先にして堂々と表現すること"}], "share": "私の存在の輝き方は「品格と輝きで人の理想を体現する存在」。あなたはどのタイプ？ #存在が光る診断"}, "山羊座:乙女座": {"title": "完璧な実力と誠実さを持つ存在", "mk": "実績と信頼", "md": "実績と信頼で確かな方向性を示す言葉の持ち主。戦略的かつ体系的な伝え方は、相手に「これで大丈夫」という確信を与えます。長期的な視点が言葉に重みをもたらします。", "ma": "実績と論理で確かな方向性を示す", "vk": "「揺るぎない信頼と重用」を引き寄せる力", "vd": "整理された清潔な環境、実務・サポート・細部への貢献の中で輝きます。清潔で機能的なミニマルな美と、緻密なデザイン感覚を持っています。目の前のことを丁寧に整え誠実にサポートすると、「あなたにしか頼めない」という指名が積み上がります。整えるほどに、実利を伴う安定した需要がやってくるギフトです。", "va": "目の前を丁寧に整え、誠実にサポートに徹する", "synthesis": "この二つが重なるとき、あなたは\n「完璧な実力と誠実さを持つ存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実績と論理で確かな方向性を示すこと"}, {"label": "在り方", "text": "目の前を丁寧に整え、誠実にサポートに徹すること"}], "share": "私の存在の輝き方は「完璧な実力と誠実さを持つ存在」。あなたはどのタイプ？ #存在が光る診断"}, "山羊座:天秤座": {"title": "品格と美しさで人を魅了する存在", "mk": "実績と信頼", "md": "実績と信頼で確かな方向性を示す言葉の持ち主。戦略的かつ体系的な伝え方は、相手に「これで大丈夫」という確信を与えます。長期的な視点が言葉に重みをもたらします。", "ma": "実績と論理で確かな方向性を示す", "vk": "「人生を格上げする良縁」を引き寄せる力", "vd": "洗練された人間関係、交渉やデザイン・美に関わる場で輝きます。優雅で調和のとれたシンメトリーと万人受けする美意識を持っています。自分の美意識を磨き調和を保っているだけで、自分をより素敵な場所へ連れて行ってくれる人が現れます。あなたがエレガントであるほど、最高のパートナーシップが引き寄せられるギフトです。", "va": "美意識を磨いて、自分の世界の調和と洗練を保つ", "synthesis": "この二つが重なるとき、あなたは\n「品格と美しさで人を魅了する存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実績と論理で確かな方向性を示すこと"}, {"label": "在り方", "text": "美意識を磨いて、自分の世界の調和と洗練を保つこと"}], "share": "私の存在の輝き方は「品格と美しさで人を魅了する存在」。あなたはどのタイプ？ #存在が光る診断"}, "山羊座:蠍座": {"title": "洞察と戦略で時代を変える存在", "mk": "実績と信頼", "md": "実績と信頼で確かな方向性を示す言葉の持ち主。戦略的かつ体系的な伝え方は、相手に「これで大丈夫」という確信を与えます。長期的な視点が言葉に重みをもたらします。", "ma": "実績と論理で確かな方向性を示す", "vk": "「深い忠誠と受け継がれる遺産」を引き寄せる力", "vd": "一つのことに没頭できる環境、深い探求・秘密保持・変容の中で輝きます。深遠で神秘的、重厚な色彩とセクシーさ、核心を突く表現の美意識があります。本質を深く追求するほど、秘密の知恵や大きな権限、遺産のような重厚な富を託されます。深めるほどに、濃密な力と深い忠誠が集まるギフトです。", "va": "一つのことに深く潜り続け、本質の探求を手放さない", "synthesis": "この二つが重なるとき、あなたは\n「洞察と戦略で時代を変える存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実績と論理で確かな方向性を示すこと"}, {"label": "在り方", "text": "一つのことに深く潜り続け、本質の探求を手放さないこと"}], "share": "私の存在の輝き方は「洞察と戦略で時代を変える存在」。あなたはどのタイプ？ #存在が光る診断"}, "山羊座:射手座": {"title": "実績と自由な視野を持つ存在", "mk": "実績と信頼", "md": "実績と信頼で確かな方向性を示す言葉の持ち主。戦略的かつ体系的な伝え方は、相手に「これで大丈夫」という確信を与えます。長期的な視点が言葉に重みをもたらします。", "ma": "実績と論理で確かな方向性を示す", "vk": "「世界を広げる自由の切符」を引き寄せる力", "vd": "自由度が高く遠出できる環境、教育・哲学・海外関連の中で輝きます。開放的でダイナミック、異国情緒とラフなスタイルの自由な美意識があります。高い理想を掲げて学んでいると、海外との縁や未知の体験ができる招待状が届きます。遠くを見つめるほど、精神的・物理的な移動の自由が手に入るギフトです。", "va": "高い理想を掲げ学び続け、遠くに目を向けて行動する", "synthesis": "この二つが重なるとき、あなたは\n「実績と自由な視野を持つ存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実績と論理で確かな方向性を示すこと"}, {"label": "在り方", "text": "高い理想を掲げ学び続け、遠くに目を向けて行動すること"}], "share": "私の存在の輝き方は「実績と自由な視野を持つ存在」。あなたはどのタイプ？ #存在が光る診断"}, "山羊座:山羊座": {"title": "揺るぎない実力と品格を持つ本物の存在", "mk": "実績と信頼", "md": "実績と信頼で確かな方向性を示す言葉の持ち主。戦略的かつ体系的な伝え方は、相手に「これで大丈夫」という確信を与えます。長期的な視点が言葉に重みをもたらします。", "ma": "実績と論理で確かな方向性を示す", "vk": "「社会的地位と堅実な豊かさ」を引き寄せる力", "vd": "秩序があり成果が目に見える環境、経営・構築・野心の中で輝きます。クラシックで正統派、格式高い機能美と時間の重みある美意識を持っています。目的を持ってコツコツと形を作っていると、確固たる社会的地位と長期的な不労所得が残ります。誠実に「形」にするほど、社会的な敬意と報酬が定着していくギフトです。", "va": "目的を持ってコツコツと形を作り続ける", "synthesis": "この二つが重なるとき、あなたは\n「揺るぎない実力と品格を持つ本物の存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実績と論理で確かな方向性を示すこと"}, {"label": "在り方", "text": "目的を持ってコツコツと形を作り続けること"}], "share": "私の存在の輝き方は「揺るぎない実力と品格を持つ本物の存在」。あなたはどのタイプ？ #存在が光る診断"}, "山羊座:水瓶座": {"title": "伝統と革新を繋ぐ橋のような存在", "mk": "実績と信頼", "md": "実績と信頼で確かな方向性を示す言葉の持ち主。戦略的かつ体系的な伝え方は、相手に「これで大丈夫」という確信を与えます。長期的な視点が言葉に重みをもたらします。", "ma": "実績と論理で確かな方向性を示す", "vk": "「境界のない自由とつながり」を引き寄せる力", "vd": "自由でフラットな環境、テクノロジー・システム構築・変革の中で輝きます。先端でユニーク、近未来的な常識を覆すデザインの美意識を持っています。常識に囚われずフラットに考えているだけで、グローバルな人脈と革新的なアイデアが広がります。自由でいるほど、面白い未来が向こうからやってくるギフトです。", "va": "常識に囚われず自由にフラットに、革新的に考え行動する", "synthesis": "この二つが重なるとき、あなたは\n「伝統と革新を繋ぐ橋のような存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実績と論理で確かな方向性を示すこと"}, {"label": "在り方", "text": "常識に囚われず自由にフラットに、革新的に考え行動すること"}], "share": "私の存在の輝き方は「伝統と革新を繋ぐ橋のような存在」。あなたはどのタイプ？ #存在が光る診断"}, "山羊座:魚座": {"title": "現実と夢を橋渡しする存在", "mk": "実績と信頼", "md": "実績と信頼で確かな方向性を示す言葉の持ち主。戦略的かつ体系的な伝え方は、相手に「これで大丈夫」という確信を与えます。長期的な視点が言葉に重みをもたらします。", "ma": "実績と論理で確かな方向性を示す", "vk": "「魂を揺さぶるインスピレーション」を引き寄せる力", "vd": "境界線のない曖昧な環境、芸術・ヒーリング・スピリチュアルの中で輝きます。幻想的で情緒的、透き通る色と境界を溶かすアートの美意識を持っています。目に見えないものを信じて委ねていると、奇跡的なタイミングと魂を揺さぶる感動が溢れます。委ねるほどに、天の助け（シンクロニシティ）が頻発するギフトです。", "va": "目に見えないものを信じ、感覚と霊感に委ねて動く", "synthesis": "この二つが重なるとき、あなたは\n「現実と夢を橋渡しする存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "実績と論理で確かな方向性を示すこと"}, {"label": "在り方", "text": "目に見えないものを信じ、感覚と霊感に委ねて動くこと"}], "share": "私の存在の輝き方は「現実と夢を橋渡しする存在」。あなたはどのタイプ？ #存在が光る診断"}, "水瓶座:牡羊座": {"title": "革命的な直感で世界を変える存在", "mk": "革新と独自性", "md": "革新と独自性で未来を切り開く言葉を持つ人。常識を超えたアイデアと未来的な視点が、人の固定観念を優しく解きほぐします。誰も考えなかった角度から光を当てます。", "ma": "独自の視点で新しい可能性を大胆に伝える", "vk": "「はじまりの切符」を引き寄せる力", "vd": "自分が「一番乗り」できる環境、即断即決・短期集中の働き方があなたを輝かせます。直感的でエネルギッシュ、原色のような潔い美的センスを持っています。あなたが直感に従って動くとき、新しいチャンスやリーダーの椅子が自然と転がり込みます。頑張らなくても、なぜか「一番最初にたどり着く人」になるのがあなたのギフトです。", "va": "直感に従ってすぐ動く。一番乗りできる環境に身を置く", "synthesis": "この二つが重なるとき、あなたは\n「革命的な直感で世界を変える存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "独自の視点で新しい可能性を大胆に伝えること"}, {"label": "在り方", "text": "直感に従ってすぐ動く。一番乗りできる環境に身を置くこと"}], "share": "私の存在の輝き方は「革命的な直感で世界を変える存在」。あなたはどのタイプ？ #存在が光る診断"}, "水瓶座:牡牛座": {"title": "革新を確かな形にする存在", "mk": "革新と独自性", "md": "革新と独自性で未来を切り開く言葉を持つ人。常識を超えたアイデアと未来的な視点が、人の固定観念を優しく解きほぐします。誰も考えなかった角度から光を当てます。", "ma": "独自の視点で新しい可能性を大胆に伝える", "vk": "「物質的豊かさ」を引き寄せる力", "vd": "五感が満たされる環境、マイペースで安定したルーティンの中でこそ輝きます。本物志向の美的センスで、上質な素材感・伝統美・心地よさを見抜く目があります。心地よさを妥協せずに選んでいると、物質的な豊かさと確実な資産が向こうからやってきます。五感を満たすほどに、豊かさが物質化していくギフトです。", "va": "五感の心地よさを妥協せずに選び続ける", "synthesis": "この二つが重なるとき、あなたは\n「革新を確かな形にする存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "独自の視点で新しい可能性を大胆に伝えること"}, {"label": "在り方", "text": "五感の心地よさを妥協せずに選び続けること"}], "share": "私の存在の輝き方は「革新を確かな形にする存在」。あなたはどのタイプ？ #存在が光る診断"}, "水瓶座:双子座": {"title": "アイデアと知識で未来を創造する存在", "mk": "革新と独自性", "md": "革新と独自性で未来を切り開く言葉を持つ人。常識を超えたアイデアと未来的な視点が、人の固定観念を優しく解きほぐします。誰も考えなかった角度から光を当てます。", "ma": "独自の視点で新しい可能性を大胆に伝える", "vk": "「旬の情報とチャンス」を引き寄せる力", "vd": "変化に富んだ環境、複業やパラレルな役割の中で輝きます。軽やかでトレンド感があり、言葉のセンスと遊び心ある美意識の持ち主です。好奇心のままに軽やかに動くだけで、今最も知りたい情報と面白い人脈が勝手に集まります。あなたがメディアになるほど、旬なチャンスが次々と舞い込むギフトです。", "va": "好奇心のままに軽やかに動いて情報を媒介する", "synthesis": "この二つが重なるとき、あなたは\n「アイデアと知識で未来を創造する存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "独自の視点で新しい可能性を大胆に伝えること"}, {"label": "在り方", "text": "好奇心のままに軽やかに動いて情報を媒介すること"}], "share": "私の存在の輝き方は「アイデアと知識で未来を創造する存在」。あなたはどのタイプ？ #存在が光る診断"}, "水瓶座:蟹座": {"title": "未来思考と温かい愛を持つ存在", "mk": "革新と独自性", "md": "革新と独自性で未来を切り開く言葉を持つ人。常識を超えたアイデアと未来的な視点が、人の固定観念を優しく解きほぐします。誰も考えなかった角度から光を当てます。", "ma": "独自の視点で新しい可能性を大胆に伝える", "vk": "「絶対的な味方と居場所」を引き寄せる力", "vd": "家族のような信頼関係、在宅や温かいチーム作りの中で輝きます。懐かしく情緒的な、居心地の良い空間と手作り感の美意識を持っています。身近な人を慈しみ自分の感情を大切にしていると、困ったときに必ず助けてくれる仲間が整います。愛を与えるほど、守られる側にも回れるギフトです。", "va": "身近な人への温かさを大切にし、感情を丁寧に扱う", "synthesis": "この二つが重なるとき、あなたは\n「未来思考と温かい愛を持つ存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "独自の視点で新しい可能性を大胆に伝えること"}, {"label": "在り方", "text": "身近な人への温かさを大切にし、感情を丁寧に扱うこと"}], "share": "私の存在の輝き方は「未来思考と温かい愛を持つ存在」。あなたはどのタイプ？ #存在が光る診断"}, "水瓶座:獅子座": {"title": "独自の輝きで時代をリードする存在", "mk": "革新と独自性", "md": "革新と独自性で未来を切り開く言葉を持つ人。常識を超えたアイデアと未来的な視点が、人の固定観念を優しく解きほぐします。誰も考えなかった角度から光を当てます。", "ma": "独自の視点で新しい可能性を大胆に伝える", "vk": "「賞賛とスポットライト」を引き寄せる力", "vd": "自己表現ができる華やかな場、称賛される立場の中で輝きます。ドラマチックで豪華、主役級の存在感とゴールドの輝きを放つ美意識があります。心から楽しみ堂々と表現しているだけで、憧れの視線と特別な待遇が引き寄せられます。あなたが輝けば輝くほど、世界があなたを主役として遇してくれるギフトです。", "va": "自分が心から楽しめることを最優先にして堂々と表現する", "synthesis": "この二つが重なるとき、あなたは\n「独自の輝きで時代をリードする存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "独自の視点で新しい可能性を大胆に伝えること"}, {"label": "在り方", "text": "自分が心から楽しめることを最優先にして堂々と表現すること"}], "share": "私の存在の輝き方は「独自の輝きで時代をリードする存在」。あなたはどのタイプ？ #存在が光る診断"}, "水瓶座:乙女座": {"title": "革新と誠実さで社会を変える存在", "mk": "革新と独自性", "md": "革新と独自性で未来を切り開く言葉を持つ人。常識を超えたアイデアと未来的な視点が、人の固定観念を優しく解きほぐします。誰も考えなかった角度から光を当てます。", "ma": "独自の視点で新しい可能性を大胆に伝える", "vk": "「揺るぎない信頼と重用」を引き寄せる力", "vd": "整理された清潔な環境、実務・サポート・細部への貢献の中で輝きます。清潔で機能的なミニマルな美と、緻密なデザイン感覚を持っています。目の前のことを丁寧に整え誠実にサポートすると、「あなたにしか頼めない」という指名が積み上がります。整えるほどに、実利を伴う安定した需要がやってくるギフトです。", "va": "目の前を丁寧に整え、誠実にサポートに徹する", "synthesis": "この二つが重なるとき、あなたは\n「革新と誠実さで社会を変える存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "独自の視点で新しい可能性を大胆に伝えること"}, {"label": "在り方", "text": "目の前を丁寧に整え、誠実にサポートに徹すること"}], "share": "私の存在の輝き方は「革新と誠実さで社会を変える存在」。あなたはどのタイプ？ #存在が光る診断"}, "水瓶座:天秤座": {"title": "美と革新で新時代を切り開く存在", "mk": "革新と独自性", "md": "革新と独自性で未来を切り開く言葉を持つ人。常識を超えたアイデアと未来的な視点が、人の固定観念を優しく解きほぐします。誰も考えなかった角度から光を当てます。", "ma": "独自の視点で新しい可能性を大胆に伝える", "vk": "「人生を格上げする良縁」を引き寄せる力", "vd": "洗練された人間関係、交渉やデザイン・美に関わる場で輝きます。優雅で調和のとれたシンメトリーと万人受けする美意識を持っています。自分の美意識を磨き調和を保っているだけで、自分をより素敵な場所へ連れて行ってくれる人が現れます。あなたがエレガントであるほど、最高のパートナーシップが引き寄せられるギフトです。", "va": "美意識を磨いて、自分の世界の調和と洗練を保つ", "synthesis": "この二つが重なるとき、あなたは\n「美と革新で新時代を切り開く存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "独自の視点で新しい可能性を大胆に伝えること"}, {"label": "在り方", "text": "美意識を磨いて、自分の世界の調和と洗練を保つこと"}], "share": "私の存在の輝き方は「美と革新で新時代を切り開く存在」。あなたはどのタイプ？ #存在が光る診断"}, "水瓶座:蠍座": {"title": "革命的な深みで世界を変革する存在", "mk": "革新と独自性", "md": "革新と独自性で未来を切り開く言葉を持つ人。常識を超えたアイデアと未来的な視点が、人の固定観念を優しく解きほぐします。誰も考えなかった角度から光を当てます。", "ma": "独自の視点で新しい可能性を大胆に伝える", "vk": "「深い忠誠と受け継がれる遺産」を引き寄せる力", "vd": "一つのことに没頭できる環境、深い探求・秘密保持・変容の中で輝きます。深遠で神秘的、重厚な色彩とセクシーさ、核心を突く表現の美意識があります。本質を深く追求するほど、秘密の知恵や大きな権限、遺産のような重厚な富を託されます。深めるほどに、濃密な力と深い忠誠が集まるギフトです。", "va": "一つのことに深く潜り続け、本質の探求を手放さない", "synthesis": "この二つが重なるとき、あなたは\n「革命的な深みで世界を変革する存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "独自の視点で新しい可能性を大胆に伝えること"}, {"label": "在り方", "text": "一つのことに深く潜り続け、本質の探求を手放さないこと"}], "share": "私の存在の輝き方は「革命的な深みで世界を変革する存在」。あなたはどのタイプ？ #存在が光る診断"}, "水瓶座:射手座": {"title": "自由と革新で人類の地平を広げる存在", "mk": "革新と独自性", "md": "革新と独自性で未来を切り開く言葉を持つ人。常識を超えたアイデアと未来的な視点が、人の固定観念を優しく解きほぐします。誰も考えなかった角度から光を当てます。", "ma": "独自の視点で新しい可能性を大胆に伝える", "vk": "「世界を広げる自由の切符」を引き寄せる力", "vd": "自由度が高く遠出できる環境、教育・哲学・海外関連の中で輝きます。開放的でダイナミック、異国情緒とラフなスタイルの自由な美意識があります。高い理想を掲げて学んでいると、海外との縁や未知の体験ができる招待状が届きます。遠くを見つめるほど、精神的・物理的な移動の自由が手に入るギフトです。", "va": "高い理想を掲げ学び続け、遠くに目を向けて行動する", "synthesis": "この二つが重なるとき、あなたは\n「自由と革新で人類の地平を広げる存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "独自の視点で新しい可能性を大胆に伝えること"}, {"label": "在り方", "text": "高い理想を掲げ学び続け、遠くに目を向けて行動すること"}], "share": "私の存在の輝き方は「自由と革新で人類の地平を広げる存在」。あなたはどのタイプ？ #存在が光る診断"}, "水瓶座:山羊座": {"title": "革新と品格で時代を変える存在", "mk": "革新と独自性", "md": "革新と独自性で未来を切り開く言葉を持つ人。常識を超えたアイデアと未来的な視点が、人の固定観念を優しく解きほぐします。誰も考えなかった角度から光を当てます。", "ma": "独自の視点で新しい可能性を大胆に伝える", "vk": "「社会的地位と堅実な豊かさ」を引き寄せる力", "vd": "秩序があり成果が目に見える環境、経営・構築・野心の中で輝きます。クラシックで正統派、格式高い機能美と時間の重みある美意識を持っています。目的を持ってコツコツと形を作っていると、確固たる社会的地位と長期的な不労所得が残ります。誠実に「形」にするほど、社会的な敬意と報酬が定着していくギフトです。", "va": "目的を持ってコツコツと形を作り続ける", "synthesis": "この二つが重なるとき、あなたは\n「革新と品格で時代を変える存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "独自の視点で新しい可能性を大胆に伝えること"}, {"label": "在り方", "text": "目的を持ってコツコツと形を作り続けること"}], "share": "私の存在の輝き方は「革新と品格で時代を変える存在」。あなたはどのタイプ？ #存在が光る診断"}, "水瓶座:水瓶座": {"title": "時代の先を行く独自の宇宙的な存在", "mk": "革新と独自性", "md": "革新と独自性で未来を切り開く言葉を持つ人。常識を超えたアイデアと未来的な視点が、人の固定観念を優しく解きほぐします。誰も考えなかった角度から光を当てます。", "ma": "独自の視点で新しい可能性を大胆に伝える", "vk": "「境界のない自由とつながり」を引き寄せる力", "vd": "自由でフラットな環境、テクノロジー・システム構築・変革の中で輝きます。先端でユニーク、近未来的な常識を覆すデザインの美意識を持っています。常識に囚われずフラットに考えているだけで、グローバルな人脈と革新的なアイデアが広がります。自由でいるほど、面白い未来が向こうからやってくるギフトです。", "va": "常識に囚われず自由にフラットに、革新的に考え行動する", "synthesis": "この二つが重なるとき、あなたは\n「時代の先を行く独自の宇宙的な存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "独自の視点で新しい可能性を大胆に伝えること"}, {"label": "在り方", "text": "常識に囚われず自由にフラットに、革新的に考え行動すること"}], "share": "私の存在の輝き方は「時代の先を行く独自の宇宙的な存在」。あなたはどのタイプ？ #存在が光る診断"}, "水瓶座:魚座": {"title": "未来と愛を繋ぐ橋のような存在", "mk": "革新と独自性", "md": "革新と独自性で未来を切り開く言葉を持つ人。常識を超えたアイデアと未来的な視点が、人の固定観念を優しく解きほぐします。誰も考えなかった角度から光を当てます。", "ma": "独自の視点で新しい可能性を大胆に伝える", "vk": "「魂を揺さぶるインスピレーション」を引き寄せる力", "vd": "境界線のない曖昧な環境、芸術・ヒーリング・スピリチュアルの中で輝きます。幻想的で情緒的、透き通る色と境界を溶かすアートの美意識を持っています。目に見えないものを信じて委ねていると、奇跡的なタイミングと魂を揺さぶる感動が溢れます。委ねるほどに、天の助け（シンクロニシティ）が頻発するギフトです。", "va": "目に見えないものを信じ、感覚と霊感に委ねて動く", "synthesis": "この二つが重なるとき、あなたは\n「未来と愛を繋ぐ橋のような存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "独自の視点で新しい可能性を大胆に伝えること"}, {"label": "在り方", "text": "目に見えないものを信じ、感覚と霊感に委ねて動くこと"}], "share": "私の存在の輝き方は「未来と愛を繋ぐ橋のような存在」。あなたはどのタイプ？ #存在が光る診断"}, "魚座:牡羊座": {"title": "夢と情熱で魂から魂へ届く存在", "mk": "感受性と霊感", "md": "感受性と詩的な共鳴で魂に届く言葉を持つ人。言葉を超えた何かを届ける能力があり、直感と霊感がその伝え方を深めます。言葉にならない真実を言葉にする才能があります。", "ma": "感覚と直感を信じて魂に響く言葉を届ける", "vk": "「はじまりの切符」を引き寄せる力", "vd": "自分が「一番乗り」できる環境、即断即決・短期集中の働き方があなたを輝かせます。直感的でエネルギッシュ、原色のような潔い美的センスを持っています。あなたが直感に従って動くとき、新しいチャンスやリーダーの椅子が自然と転がり込みます。頑張らなくても、なぜか「一番最初にたどり着く人」になるのがあなたのギフトです。", "va": "直感に従ってすぐ動く。一番乗りできる環境に身を置く", "synthesis": "この二つが重なるとき、あなたは\n「夢と情熱で魂から魂へ届く存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "感覚と直感を信じて魂に響く言葉を届けること"}, {"label": "在り方", "text": "直感に従ってすぐ動く。一番乗りできる環境に身を置くこと"}], "share": "私の存在の輝き方は「夢と情熱で魂から魂へ届く存在」。あなたはどのタイプ？ #存在が光る診断"}, "魚座:牡牛座": {"title": "夢と豊かさで豊穣の世界をもたらす存在", "mk": "感受性と霊感", "md": "感受性と詩的な共鳴で魂に届く言葉を持つ人。言葉を超えた何かを届ける能力があり、直感と霊感がその伝え方を深めます。言葉にならない真実を言葉にする才能があります。", "ma": "感覚と直感を信じて魂に響く言葉を届ける", "vk": "「物質的豊かさ」を引き寄せる力", "vd": "五感が満たされる環境、マイペースで安定したルーティンの中でこそ輝きます。本物志向の美的センスで、上質な素材感・伝統美・心地よさを見抜く目があります。心地よさを妥協せずに選んでいると、物質的な豊かさと確実な資産が向こうからやってきます。五感を満たすほどに、豊かさが物質化していくギフトです。", "va": "五感の心地よさを妥協せずに選び続ける", "synthesis": "この二つが重なるとき、あなたは\n「夢と豊かさで豊穣の世界をもたらす存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "感覚と直感を信じて魂に響く言葉を届けること"}, {"label": "在り方", "text": "五感の心地よさを妥協せずに選び続けること"}], "share": "私の存在の輝き方は「夢と豊かさで豊穣の世界をもたらす存在」。あなたはどのタイプ？ #存在が光る診断"}, "魚座:双子座": {"title": "直感と知性が溶け合う存在", "mk": "感受性と霊感", "md": "感受性と詩的な共鳴で魂に届く言葉を持つ人。言葉を超えた何かを届ける能力があり、直感と霊感がその伝え方を深めます。言葉にならない真実を言葉にする才能があります。", "ma": "感覚と直感を信じて魂に響く言葉を届ける", "vk": "「旬の情報とチャンス」を引き寄せる力", "vd": "変化に富んだ環境、複業やパラレルな役割の中で輝きます。軽やかでトレンド感があり、言葉のセンスと遊び心ある美意識の持ち主です。好奇心のままに軽やかに動くだけで、今最も知りたい情報と面白い人脈が勝手に集まります。あなたがメディアになるほど、旬なチャンスが次々と舞い込むギフトです。", "va": "好奇心のままに軽やかに動いて情報を媒介する", "synthesis": "この二つが重なるとき、あなたは\n「直感と知性が溶け合う存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "感覚と直感を信じて魂に響く言葉を届けること"}, {"label": "在り方", "text": "好奇心のままに軽やかに動いて情報を媒介すること"}], "share": "私の存在の輝き方は「直感と知性が溶け合う存在」。あなたはどのタイプ？ #存在が光る診断"}, "魚座:蟹座": {"title": "愛と愛が深く共鳴する存在", "mk": "感受性と霊感", "md": "感受性と詩的な共鳴で魂に届く言葉を持つ人。言葉を超えた何かを届ける能力があり、直感と霊感がその伝え方を深めます。言葉にならない真実を言葉にする才能があります。", "ma": "感覚と直感を信じて魂に響く言葉を届ける", "vk": "「絶対的な味方と居場所」を引き寄せる力", "vd": "家族のような信頼関係、在宅や温かいチーム作りの中で輝きます。懐かしく情緒的な、居心地の良い空間と手作り感の美意識を持っています。身近な人を慈しみ自分の感情を大切にしていると、困ったときに必ず助けてくれる仲間が整います。愛を与えるほど、守られる側にも回れるギフトです。", "va": "身近な人への温かさを大切にし、感情を丁寧に扱う", "synthesis": "この二つが重なるとき、あなたは\n「愛と愛が深く共鳴する存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "感覚と直感を信じて魂に響く言葉を届けること"}, {"label": "在り方", "text": "身近な人への温かさを大切にし、感情を丁寧に扱うこと"}], "share": "私の存在の輝き方は「愛と愛が深く共鳴する存在」。あなたはどのタイプ？ #存在が光る診断"}, "魚座:獅子座": {"title": "夢と輝きで人の魂を照らす存在", "mk": "感受性と霊感", "md": "感受性と詩的な共鳴で魂に届く言葉を持つ人。言葉を超えた何かを届ける能力があり、直感と霊感がその伝え方を深めます。言葉にならない真実を言葉にする才能があります。", "ma": "感覚と直感を信じて魂に響く言葉を届ける", "vk": "「賞賛とスポットライト」を引き寄せる力", "vd": "自己表現ができる華やかな場、称賛される立場の中で輝きます。ドラマチックで豪華、主役級の存在感とゴールドの輝きを放つ美意識があります。心から楽しみ堂々と表現しているだけで、憧れの視線と特別な待遇が引き寄せられます。あなたが輝けば輝くほど、世界があなたを主役として遇してくれるギフトです。", "va": "自分が心から楽しめることを最優先にして堂々と表現する", "synthesis": "この二つが重なるとき、あなたは\n「夢と輝きで人の魂を照らす存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "感覚と直感を信じて魂に響く言葉を届けること"}, {"label": "在り方", "text": "自分が心から楽しめることを最優先にして堂々と表現すること"}], "share": "私の存在の輝き方は「夢と輝きで人の魂を照らす存在」。あなたはどのタイプ？ #存在が光る診断"}, "魚座:乙女座": {"title": "霊感と誠実さで人を導く存在", "mk": "感受性と霊感", "md": "感受性と詩的な共鳴で魂に届く言葉を持つ人。言葉を超えた何かを届ける能力があり、直感と霊感がその伝え方を深めます。言葉にならない真実を言葉にする才能があります。", "ma": "感覚と直感を信じて魂に響く言葉を届ける", "vk": "「揺るぎない信頼と重用」を引き寄せる力", "vd": "整理された清潔な環境、実務・サポート・細部への貢献の中で輝きます。清潔で機能的なミニマルな美と、緻密なデザイン感覚を持っています。目の前のことを丁寧に整え誠実にサポートすると、「あなたにしか頼めない」という指名が積み上がります。整えるほどに、実利を伴う安定した需要がやってくるギフトです。", "va": "目の前を丁寧に整え、誠実にサポートに徹する", "synthesis": "この二つが重なるとき、あなたは\n「霊感と誠実さで人を導く存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "感覚と直感を信じて魂に響く言葉を届けること"}, {"label": "在り方", "text": "目の前を丁寧に整え、誠実にサポートに徹すること"}], "share": "私の存在の輝き方は「霊感と誠実さで人を導く存在」。あなたはどのタイプ？ #存在が光る診断"}, "魚座:天秤座": {"title": "夢と美が溶け合う芸術的な存在", "mk": "感受性と霊感", "md": "感受性と詩的な共鳴で魂に届く言葉を持つ人。言葉を超えた何かを届ける能力があり、直感と霊感がその伝え方を深めます。言葉にならない真実を言葉にする才能があります。", "ma": "感覚と直感を信じて魂に響く言葉を届ける", "vk": "「人生を格上げする良縁」を引き寄せる力", "vd": "洗練された人間関係、交渉やデザイン・美に関わる場で輝きます。優雅で調和のとれたシンメトリーと万人受けする美意識を持っています。自分の美意識を磨き調和を保っているだけで、自分をより素敵な場所へ連れて行ってくれる人が現れます。あなたがエレガントであるほど、最高のパートナーシップが引き寄せられるギフトです。", "va": "美意識を磨いて、自分の世界の調和と洗練を保つ", "synthesis": "この二つが重なるとき、あなたは\n「夢と美が溶け合う芸術的な存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "感覚と直感を信じて魂に響く言葉を届けること"}, {"label": "在り方", "text": "美意識を磨いて、自分の世界の調和と洗練を保つこと"}], "share": "私の存在の輝き方は「夢と美が溶け合う芸術的な存在」。あなたはどのタイプ？ #存在が光る診断"}, "魚座:蠍座": {"title": "見えない世界の奥まで触れる存在", "mk": "感受性と霊感", "md": "感受性と詩的な共鳴で魂に届く言葉を持つ人。言葉を超えた何かを届ける能力があり、直感と霊感がその伝え方を深めます。言葉にならない真実を言葉にする才能があります。", "ma": "感覚と直感を信じて魂に響く言葉を届ける", "vk": "「深い忠誠と受け継がれる遺産」を引き寄せる力", "vd": "一つのことに没頭できる環境、深い探求・秘密保持・変容の中で輝きます。深遠で神秘的、重厚な色彩とセクシーさ、核心を突く表現の美意識があります。本質を深く追求するほど、秘密の知恵や大きな権限、遺産のような重厚な富を託されます。深めるほどに、濃密な力と深い忠誠が集まるギフトです。", "va": "一つのことに深く潜り続け、本質の探求を手放さない", "synthesis": "この二つが重なるとき、あなたは\n「見えない世界の奥まで触れる存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "感覚と直感を信じて魂に響く言葉を届けること"}, {"label": "在り方", "text": "一つのことに深く潜り続け、本質の探求を手放さないこと"}], "share": "私の存在の輝き方は「見えない世界の奥まで触れる存在」。あなたはどのタイプ？ #存在が光る診断"}, "魚座:射手座": {"title": "宇宙と繋がる自由な魂", "mk": "感受性と霊感", "md": "感受性と詩的な共鳴で魂に届く言葉を持つ人。言葉を超えた何かを届ける能力があり、直感と霊感がその伝え方を深めます。言葉にならない真実を言葉にする才能があります。", "ma": "感覚と直感を信じて魂に響く言葉を届ける", "vk": "「世界を広げる自由の切符」を引き寄せる力", "vd": "自由度が高く遠出できる環境、教育・哲学・海外関連の中で輝きます。開放的でダイナミック、異国情緒とラフなスタイルの自由な美意識があります。高い理想を掲げて学んでいると、海外との縁や未知の体験ができる招待状が届きます。遠くを見つめるほど、精神的・物理的な移動の自由が手に入るギフトです。", "va": "高い理想を掲げ学び続け、遠くに目を向けて行動する", "synthesis": "この二つが重なるとき、あなたは\n「宇宙と繋がる自由な魂」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "感覚と直感を信じて魂に響く言葉を届けること"}, {"label": "在り方", "text": "高い理想を掲げ学び続け、遠くに目を向けて行動すること"}], "share": "私の存在の輝き方は「宇宙と繋がる自由な魂」。あなたはどのタイプ？ #存在が光る診断"}, "魚座:山羊座": {"title": "夢を現実に変える神秘の存在", "mk": "感受性と霊感", "md": "感受性と詩的な共鳴で魂に届く言葉を持つ人。言葉を超えた何かを届ける能力があり、直感と霊感がその伝え方を深めます。言葉にならない真実を言葉にする才能があります。", "ma": "感覚と直感を信じて魂に響く言葉を届ける", "vk": "「社会的地位と堅実な豊かさ」を引き寄せる力", "vd": "秩序があり成果が目に見える環境、経営・構築・野心の中で輝きます。クラシックで正統派、格式高い機能美と時間の重みある美意識を持っています。目的を持ってコツコツと形を作っていると、確固たる社会的地位と長期的な不労所得が残ります。誠実に「形」にするほど、社会的な敬意と報酬が定着していくギフトです。", "va": "目的を持ってコツコツと形を作り続ける", "synthesis": "この二つが重なるとき、あなたは\n「夢を現実に変える神秘の存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "感覚と直感を信じて魂に響く言葉を届けること"}, {"label": "在り方", "text": "目的を持ってコツコツと形を作り続けること"}], "share": "私の存在の輝き方は「夢を現実に変える神秘の存在」。あなたはどのタイプ？ #存在が光る診断"}, "魚座:水瓶座": {"title": "未来の愛の形を体現する存在", "mk": "感受性と霊感", "md": "感受性と詩的な共鳴で魂に届く言葉を持つ人。言葉を超えた何かを届ける能力があり、直感と霊感がその伝え方を深めます。言葉にならない真実を言葉にする才能があります。", "ma": "感覚と直感を信じて魂に響く言葉を届ける", "vk": "「境界のない自由とつながり」を引き寄せる力", "vd": "自由でフラットな環境、テクノロジー・システム構築・変革の中で輝きます。先端でユニーク、近未来的な常識を覆すデザインの美意識を持っています。常識に囚われずフラットに考えているだけで、グローバルな人脈と革新的なアイデアが広がります。自由でいるほど、面白い未来が向こうからやってくるギフトです。", "va": "常識に囚われず自由にフラットに、革新的に考え行動する", "synthesis": "この二つが重なるとき、あなたは\n「未来の愛の形を体現する存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "感覚と直感を信じて魂に響く言葉を届けること"}, {"label": "在り方", "text": "常識に囚われず自由にフラットに、革新的に考え行動すること"}], "share": "私の存在の輝き方は「未来の愛の形を体現する存在」。あなたはどのタイプ？ #存在が光る診断"}, "魚座:魚座": {"title": "宇宙の愛そのものを体現する存在", "mk": "感受性と霊感", "md": "感受性と詩的な共鳴で魂に届く言葉を持つ人。言葉を超えた何かを届ける能力があり、直感と霊感がその伝え方を深めます。言葉にならない真実を言葉にする才能があります。", "ma": "感覚と直感を信じて魂に響く言葉を届ける", "vk": "「魂を揺さぶるインスピレーション」を引き寄せる力", "vd": "境界線のない曖昧な環境、芸術・ヒーリング・スピリチュアルの中で輝きます。幻想的で情緒的、透き通る色と境界を溶かすアートの美意識を持っています。目に見えないものを信じて委ねていると、奇跡的なタイミングと魂を揺さぶる感動が溢れます。委ねるほどに、天の助け（シンクロニシティ）が頻発するギフトです。", "va": "目に見えないものを信じ、感覚と霊感に委ねて動く", "synthesis": "この二つが重なるとき、あなたは\n「宇宙の愛そのものを体現する存在」\nとして輝きます。\n\nがんばって手に入れるのではなく、あなたがあなたらしくいるだけで、\n才能が報われ、存在そのものが光りはじめます。\n\n才能を知ることより大切なのは、才能の輝かせ方を知ること。\nあなたにはもう、その答えがあります。", "actions": [{"label": "伝え方", "text": "感覚と直感を信じて魂に響く言葉を届けること"}, {"label": "在り方", "text": "目に見えないものを信じ、感覚と霊感に委ねて動くこと"}], "share": "私の存在の輝き方は「宇宙の愛そのものを体現する存在」。あなたはどのタイプ？ #存在が光る診断"}};
+
+// ── 星座リスト（黄道経度 → 日本語）─────────────────────────────────
+const SIGN_JP_LIST = [
+  '牡羊座','牡牛座','双子座','蟹座','獅子座','乙女座',
+  '天秤座','蠍座','射手座','山羊座','水瓶座','魚座'
+];
+function eclipticToSign(lon) {
+  return SIGN_JP_LIST[Math.floor(((lon % 360) + 360) % 360 / 30)];
+}
+
+// ── 分セレクトの活性/非活性切り替え ─────────────────────────────
+function toggleBdMinute() {
+  const hVal = document.getElementById('bd-hour').value;
+  const minSel = document.getElementById('bd-minute');
+  minSel.disabled = hVal === '';
+  minSel.style.opacity = hVal === '' ? '0.4' : '1';
+}
+
+// ── Astronomy Engine で星座を取得（地心・トロピカル） ────────────
+// GeoVector(body, time, aberration) → Ecliptic(vec).elon で
+// kerykeionと完全一致する地心黄道経度が得られる
+function lookupSigns(year, month, day, hour, minute) {
+  if (typeof Astronomy === 'undefined') {
+    return null; // CDN読み込み失敗
+  }
+  try {
+    const h   = (hour   !== null && hour   !== undefined) ? hour   : 12;
+    const min = (minute !== null && minute !== undefined) ? minute : 0;
+    // ブラウザのローカル時間（JST）で日時を作成
+    const jsDate = new Date(year, month - 1, day, h, min, 0);
+    const time = Astronomy.MakeTime(jsDate);
+
+    const mVec = Astronomy.GeoVector(Astronomy.Body.Mercury, time, true);
+    const vVec = Astronomy.GeoVector(Astronomy.Body.Venus,   time, true);
+    const mEcl = Astronomy.Ecliptic(mVec);
+    const vEcl = Astronomy.Ecliptic(vVec);
+
+    const mSign = eclipticToSign(mEcl.elon);
+    const vSign = eclipticToSign(vEcl.elon);
+
+    console.log(`[AstroJS] ${year}/${month}/${day} ${h}時 → 水星=${mSign}(${mEcl.elon.toFixed(1)}°) 金星=${vSign}(${vEcl.elon.toFixed(1)}°)`);
+    return { mercury: mSign, venus: vSign, source: 'astronomy-js', mDeg: mEcl.elon, vDeg: vEcl.elon };
+  } catch(e) {
+    console.error('[AstroJS] 計算エラー:', e);
+    return null;
+  }
+}
+
+// ── State ─────────────────────────────────────────────────────────
+let selMercury=null, selVenus=null;
+
+// ── Stars ─────────────────────────────────────────────────────────
+(function(){
+  const c=document.getElementById('stars'), ctx=c.getContext('2d');
+  let W,H,stars=[];
+  function resize(){ W=c.width=innerWidth; H=c.height=innerHeight; }
+  function init(){
+    stars=[];
+    for(let i=0;i<180;i++) stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.2+.2,a:Math.random(),da:(Math.random()-.5)*.003});
+  }
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    stars.forEach(s=>{
+      s.a=Math.max(.05,Math.min(1,s.a+s.da));
+      if(s.a<=.05||s.a>=1) s.da*=-1;
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,255,220,${s.a})`; ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize',()=>{resize();init();});
+  resize();init();draw();
+})();
+
+// ── Screen ────────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const el=document.getElementById(id);
+  if(!el) return;
+  el.classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+  el.querySelectorAll('[class*="afd"]').forEach(e=>{e.style.animation='none';e.offsetHeight;e.style.animation='';});
+}
+
+// ── Birthdate submit（Astronomy Engine で計算） ───────────────────
+function submitBirthdate() {
+  const y = parseInt(document.getElementById('bd-year').value);
+  const m = parseInt(document.getElementById('bd-month').value);
+  const d = parseInt(document.getElementById('bd-day').value);
+  const hVal   = document.getElementById('bd-hour').value;
+  const minVal = document.getElementById('bd-minute').value;
+  const h   = hVal === '' ? null : parseInt(hVal);
+  const min = hVal === '' ? null : parseInt(minVal);
+
+  const errEl = document.getElementById('err-birthdate');
+
+  if(!y||!m||!d||y<1900||y>2100||isNaN(y)) {
+    errEl.style.display='block';
+    errEl.textContent='正しい生年月日を入力してください'; return;
+  }
+  errEl.style.display='none';
+
+  // Astronomy Engine でブラウザ内リアルタイム計算
+  if (typeof Astronomy === 'undefined') {
+    errEl.textContent='計算ライブラリの読み込みに失敗しました。インターネット接続を確認してください。';
+    errEl.style.display='block'; return;
+  }
+
+  const res = lookupSigns(y, m, d, h, min);
+
+  if(!res) {
+    errEl.textContent='計算できませんでした。日付を確認してください。';
+    errEl.style.display='block'; return;
+  }
+
+  let timeLabel;
+  if (h !== null) {
+    timeLabel = `${h}時${String(min).padStart(2,'0')}分`;
+  } else {
+    timeLabel = '時刻不明（正午で計算）';
+  }
+  const sourceNote = `☿${res.mercury}（${res.mDeg.toFixed(1)}°）　♀${res.venus}（${res.vDeg.toFixed(1)}°）　${y}/${m}/${d} ${timeLabel}`;
+
+  selMercury = res.mercury;
+  selVenus   = res.venus;
+  document.getElementById('confirm-mercury-text').textContent = res.mercury;
+  document.getElementById('confirm-venus-text').textContent   = res.venus;
+  document.getElementById('confirm-source-note').textContent  = sourceNote;
+  showScreen('screen-confirm');
+}
+
+// ── Confirm ───────────────────────────────────────────────────────
+function confirmAndShowResult() { showResult(); }
+
+// ── Show result ───────────────────────────────────────────────────
+function showResult() {
+  if(!selMercury||!selVenus) return;
+  const key=selMercury+':'+selVenus;
+  const p=PATTERNS[key];
+  if(!p) { alert('データが見つかりませんでした'); return; }
+
+  document.getElementById('result-title').textContent   = p.title;
+  document.getElementById('result-m-kw').textContent    = '【' + p.mk + '】';
+  document.getElementById('result-m-desc').textContent  = p.md;
+  document.getElementById('result-v-kw').textContent    = p.vk;
+  document.getElementById('result-v-desc').textContent  = p.vd;
+  document.getElementById('result-synthesis').textContent = p.synthesis;
+
+  // アクション
+  const ar=document.getElementById('result-actions');
+  ar.innerHTML='';
+  p.actions.forEach(item=>{
+    const div=document.createElement('div');
+    div.className='action-item';
+    div.innerHTML=`<span class="action-badge">${item.label}</span><p>${item.text}</p>`;
+    ar.appendChild(div);
+  });
+
+  // シェア
+  document.getElementById('share-copy-text').textContent=p.share;
+  const shareText=encodeURIComponent(p.share+'\n');
+  const shareUrl=encodeURIComponent(location.href.split('?')[0]+'?m='+encodeURIComponent(selMercury)+'&v='+encodeURIComponent(selVenus));
+  document.getElementById('share-btn').href='https://twitter.com/intent/tweet?text='+shareText+'&url='+shareUrl;
+
+  showScreen('screen-result');
+
+  // URL params
+  const u=new URL(location);
+  u.searchParams.set('m',selMercury); u.searchParams.set('v',selVenus);
+  history.replaceState({},'',u);
+}
+
+// ── CTA ───────────────────────────────────────────────────────────
+function openMailForm() { alert('メルマガ登録フォームのURLを設定してください（UTAGE）'); }
+function openSession()  { alert('セッションページのURLを設定してください'); }
+
+// ── URL params restore ────────────────────────────────────────────
+(function(){
+  const p=new URLSearchParams(location.search);
+  const m=p.get('m'), v=p.get('v');
+  if(m&&v&&PATTERNS[m+':'+v]) { selMercury=m; selVenus=v; showResult(); }
+})();
+</script>
+</body>
+</html>
